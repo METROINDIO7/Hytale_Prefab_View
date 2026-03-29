@@ -1,137 +1,63 @@
-# Hytale Prefab Viewer — Godot 4
+# Hytale Prefab Viewer
 
-Herramienta de planificación a escala para estructuras de Hytale.  
-Importa archivos `.prefab.json` y los visualiza en un entorno 3D con cámaras de referencia e imágenes semitransparentes superpuestas.
+[![Godot 4](https://img.shields.io/badge/Godot-4.x-blue.svg)](https://godotengine.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
+A lightweight, scale-accurate **3D prefab editor and viewer** made specifically for the Hytale modding community.
 
-## Requisitos
+Plan, build, and visualize your structures with real Hytale blocks before importing them into the game.
 
-| Requisito         | Versión mínima |
-|-------------------|----------------|
-| Godot Engine      | **4.1** o superior |
-| Sistema operativo | Windows / macOS / Linux |
+![Screenshot](https://via.placeholder.com/800x450?text=Main+Screenshot)  
+*(Replace with a real screenshot once you upload one)*
 
----
+## ✨ Features
 
-## Instalación
+- **Real-time 3D block editing** (Paint, Erase, Select tools)
+- Multiple **brush planes**: Horizontal (XZ), Vertical X, Vertical Z
+- **Group system** to organize large builds
+- **Reference Cameras** + image overlay support (perfect for tracing concepts)
+- **Axis Gizmo** in the corner showing camera orientation
+- **Occlusion culling** for better performance with big structures
+- **Undo / Redo** support
+- Searchable block palette organized by categories (Rock, Wood, Planks, Metal, Glass, etc.)
+- Import / Export `.prefab.json` files
+- Save / Load complete projects (`.hvproj.json`)
 
-1. Abre **Godot 4**.
-2. En el Project Manager, haz clic en **Import**.
-3. Navega a la carpeta `hytale_prefab_viewer/` y selecciona `project.godot`.
-4. Haz clic en **Import & Edit** → luego **▶ Play** para ejecutar.
+## Screenshots
 
----
+*(Add 4–6 screenshots here)*
 
-## Cómo usar
+## How to Use
 
-### 1. Cargar un prefab
-- Clic en **"Cargar .prefab.json"** en el panel izquierdo.
-- Navega al archivo `.prefab.json` exportado desde Hytale.
-- La estructura aparece centrada en la cuadrícula.
+1. Download the latest release (Windows / Linux / macOS)
+2. Run the executable
+3. Start building from scratch or **import** a `.prefab.json` file
+4. Use the bottom palette to select blocks
+5. Right panel for Groups and Reference Cameras
+6. Press **F1** or go to **Help → Controls** for full keyboard shortcuts
 
-### 2. Navegar la vista aérea
-| Acción                        | Control                         |
-|-------------------------------|---------------------------------|
-| Mover cámara                  | `WASD` / teclas de flecha       |
-| Zoom                          | Rueda del mouse                 |
-| Paneo libre                   | Botón medio del mouse + arrastrar |
-| Orbitar (rotar alrededor)     | Botón derecho del mouse + arrastrar |
+## Controls (Quick Reference)
 
-### 3. Cámaras de referencia
-- Coloca la **vista aérea** en la perspectiva que quieres guardar.
-- Clic **"+ Añadir cámara"** → se crea una cámara con esa pose exacta.
-- Usa el **selector de vista** para cambiar entre la cámara aérea y tus cámaras de referencia.
+- **WASD / Arrows** – Move camera
+- **Q / E** – Move up / down
+- **Mouse Wheel** – Zoom
+- **Middle Mouse Drag** – Pan
+- **Right Mouse Drag** – Orbit
+- **Left Click** – Paint / Erase / Select (depending on tool)
 
-### 4. Imagen de referencia (overlay semitransparente)
-- Selecciona una cámara de referencia haciendo clic en **"Seleccionar"**.
-- Clic **"Cargar imagen para cámara activa"** → elige un PNG/JPG.
-- La imagen aparece como overlay semitransparente cuando esa cámara está activa.
-- Ajusta la **opacidad** con el slider (0 % = invisible, 100 % = opaco).
+Full controls available in the in-app Help menu.
 
-### 5. Verificar escala
-- Alterna entre cámaras para comparar tu prefab con la imagen de referencia.
-- Mueve bloques en Hytale hasta que coincidan visualmente con tu boceto.
+## Planned Features
 
----
+- More block categories and variants
+- Improved selection tools (hollow shapes, patterns)
+- Better export options
+- Theme switcher (Dark/Light)
+- Multi-language support
 
-## Estructura del proyecto
+## Building from Source
 
-```
-hytale_prefab_viewer/
-├── project.godot               ← Configuración del proyecto Godot
-├── scenes/
-│   └── main.tscn               ← Escena principal (delega todo a main.gd)
-└── scripts/
-    ├── main.gd                 ← Controlador principal + construcción de UI
-    ├── prefab_loader.gd        ← Parseo de archivos .prefab.json
-    ├── block_renderer.gd       ← Renderizado 3D con MultiMesh (eficiente)
-    ├── camera_controller.gd    ← Gestión de cámara aérea y cámaras de referencia
-    └── reference_manager.gd    ← Overlays de imagen semitransparentes
-```
-
----
-
-## Formato de Prefab soportado
-
-Compatible con el formato estándar de Hytale:
-
-```json
-{
-  "version": 8,
-  "blockIdVersion": 11,
-  "anchorX": 0, "anchorY": 0, "anchorZ": 0,
-  "blocks": [
-    { "x": 0, "y": 0, "z": 0, "name": "Rock_Sandstone_Brick_Pillar_Middle" },
-    { "x": 1, "y": 0, "z": 0, "name": "Rock_Sandstone_White_Brick", "rotation": 2 }
-  ],
-  "fluids": [ ... ]
-}
-```
-
-**Campos leídos:** `blocks[].x/y/z`, `blocks[].name`, `blocks[].rotation`.  
-Los fluidos (`fluids`) se ignoran actualmente (solo se muestran sólidos).
-
----
-
-## Sistema de colores
-
-Los bloques se colorean automáticamente por categoría según su nombre:
-
-| Categoría      | Color aproximado       |
-|----------------|------------------------|
-| `Roof`         | Terracota oscuro        |
-| `Sandstone`    | Arena cálida            |
-| `Cobble`       | Gris medio              |
-| `Wood / Plank` | Marrón cálido           |
-| `Grass`        | Verde                   |
-| `Sand`         | Arena clara             |
-| `Stone / Rock` | Gris azulado            |
-| `Water`        | Azul semitransparente   |
-| `Ice / Glass`  | Azul hielo transparente |
-| `Gold`         | Amarillo dorado         |
-| Desconocido    | Color por hash del nombre |
-
----
-
-## Rendimiento y Occlusion Culling
-
-- Los bloques se renderizan usando **`MultiMeshInstance3D`** agrupado por color, reduciendo drásticamente los draw calls.
-- El **SubViewport** tiene `use_occlusion_culling = true` activado.
-- Godot 4 realiza **frustum culling** automáticamente sobre los MultiMesh.
-- Prefabs de hasta ~50 000 bloques deberían funcionar con fluidez.
-
----
-
-## Limitaciones actuales
-
-- Los bloques se muestran como cubos coloreados (sin meshes originales de Hytale).
-- Las texturas reales de Hytale no están incluidas (son propiedad de Hypixel Studios).
-- Los fluidos no se renderizan todavía.
-- No hay exportación de vuelta a `.prefab.json`.
-
----
-
-## Licencia
-
-Proyecto de uso personal / herramienta de ayuda. No afiliado a Hypixel Studios ni a Hytale.
+```bash
+git clone https://github.com/yourusername/hytale-prefab-viewer.git
+cd hytale-prefab-viewer
+# Open the project in Godot 4.3 or newer
