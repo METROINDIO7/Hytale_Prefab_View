@@ -7,8 +7,7 @@ A lightweight, scale-accurate **3D prefab editor and viewer** made specifically 
 
 Plan, build, and visualize your structures with real Hytale blocks before importing them into the game.
 
-![Screenshot](https://via.placeholder.com/800x450?text=Main+Screenshot)  
-*(Replace with a real screenshot once you upload one)*
+
 
 ## ✨ Features
 
