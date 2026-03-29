@@ -52,9 +52,3 @@ Full controls available in the in-app Help menu.
 - Theme switcher (Dark/Light)
 - Multi-language support
 
-## Building from Source
-
-```bash
-git clone https://github.com/yourusername/hytale-prefab-viewer.git
-cd hytale-prefab-viewer
-# Open the project in Godot 4.3 or newer
