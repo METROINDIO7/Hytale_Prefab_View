@@ -22,9 +22,7 @@ Plan, build, and visualize your structures with real Hytale blocks before import
 - Import / Export `.prefab.json` files
 - Save / Load complete projects (`.hvproj.json`)
 
-## Screenshots
 
-*(Add 4–6 screenshots here)*
 
 ## How to Use
 
