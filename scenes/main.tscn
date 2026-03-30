@@ -298,7 +298,67 @@ theme_override_font_sizes/font_size = 10
 toggle_mode = true
 text = "◯ Circle"
 
+[node name="SelShapeAdvancedRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ShapeLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelShapeAdvancedRow"]
+custom_minimum_size = Vector2(58, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Shape:"
+
+[node name="SelShapeOption" type="OptionButton" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelShapeAdvancedRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SelModeRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ModeLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelModeRow"]
+custom_minimum_size = Vector2(58, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Mode:"
+
+[node name="SelModeOption" type="OptionButton" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelModeRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SelActionRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ActionLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelActionRow"]
+custom_minimum_size = Vector2(58, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Action:"
+
+[node name="SelActionOption" type="OptionButton" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelActionRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SelBorderRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="BorderLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelBorderRow"]
+custom_minimum_size = Vector2(58, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Border:"
+
+[node name="SelBorderSpin" type="SpinBox" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelBorderRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 0)
+min_value = 1.0
+max_value = 16.0
+value = 1.0
+
 [node name="SelFillCheck" type="CheckBox" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox" unique_id=1940893409]
+visible = false
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 11

@@ -4,14 +4,17 @@
 #   - Vertical X brush (YZ plane)
 #   - Vertical Z brush (XY plane)
 #   - Brush height for vertical modes
-#   - Selection: Rectangle or Circle, Fill or Hollow
+#   - 2D and 3D selections: rectangles, circles, boxes, cylinders, spheres, pyramids
+#   - Solid, hollow or border modes with configurable thickness
 class_name BlockEditor
 extends Node
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
 enum Tool       { SELECT, PAINT, ERASE, SHAPE_SELECT }
 enum BrushPlane { HORIZONTAL, VERTICAL_X, VERTICAL_Z }
-enum SelShape   { RECT, CIRCLE }
+enum SelShape   { RECT, CIRCLE, BOX, CYLINDER, SPHERE, PYRAMID }
+enum SelMode    { SOLID, HOLLOW, BORDER }
+enum SelAction  { PAINT, ERASE }
 
 # ── Public state ──────────────────────────────────────────────────────────────
 var current_tool   : Tool       = Tool.SELECT
@@ -22,7 +25,10 @@ var brush_size     : int        = 1
 var brush_plane    : BrushPlane = BrushPlane.HORIZONTAL
 var brush_height   : int        = 1
 var sel_shape      : SelShape   = SelShape.RECT
+var sel_mode       : SelMode    = SelMode.SOLID
+var sel_action     : SelAction  = SelAction.PAINT
 var sel_fill       : bool       = true
+var sel_border_thickness : int  = 1
 
 signal action_performed()
 signal preview_moved(grid_pos: Vector3i)
@@ -166,9 +172,30 @@ func set_active_group(g: String) -> void: active_group = g
 func set_y_level(y: int)        -> void: edit_y = y
 func set_brush_size(s: int)     -> void: brush_size = clampi(s, 1, 9)
 func set_brush_plane(p: BrushPlane) -> void: brush_plane = p
-func set_brush_height(h: int)   -> void: brush_height = clampi(h, 1, 64)
-func set_sel_shape(s: SelShape) -> void: sel_shape = s
-func set_sel_fill(f: bool)      -> void: sel_fill = f
+func set_brush_height(h: int)   -> void:
+	brush_height = clampi(h, 1, 64)
+	if _sel_active or _sel_drag:
+		_update_sel_preview()
+func set_sel_shape(s: SelShape) -> void:
+	sel_shape = s
+	if _sel_active or _sel_drag:
+		_update_sel_preview()
+func set_sel_mode(m: SelMode)   -> void:
+	sel_mode = m
+	sel_fill = (m == SelMode.SOLID)
+	if _sel_active or _sel_drag:
+		_update_sel_preview()
+func set_sel_action(a: SelAction) -> void:
+	sel_action = a
+func set_sel_fill(f: bool)      -> void:
+	sel_fill = f
+	sel_mode = SelMode.SOLID if f else SelMode.HOLLOW
+	if _sel_active or _sel_drag:
+		_update_sel_preview()
+func set_sel_border_thickness(t: int) -> void:
+	sel_border_thickness = clampi(t, 1, 32)
+	if _sel_active or _sel_drag:
+		_update_sel_preview()
 
 
 ## Apply current block to the active selection, then clear it.
@@ -177,13 +204,13 @@ func apply_selection() -> void:
 		return
 	var positions := _get_selection_positions()
 	var changed := false
+	var erase_selection := (sel_action == SelAction.ERASE)
 	_renderer.begin_bulk_edit()
 	for pos in positions:
-		match current_tool:
-			Tool.PAINT, Tool.SHAPE_SELECT:
-				changed = _renderer.add_block(pos, current_block, active_group) or changed
-			Tool.ERASE:
-				changed = _renderer.remove_block(pos) or changed
+		if erase_selection:
+			changed = _renderer.remove_block(pos) or changed
+		else:
+			changed = _renderer.add_block(pos, current_block, active_group) or changed
 	_renderer.end_bulk_edit()
 	if changed:
 		action_performed.emit()
@@ -251,40 +278,190 @@ func _get_brush_positions(center: Vector3i) -> Array:
 func _get_selection_positions() -> Array:
 	var mn := Vector3i(min(_sel_start.x, _sel_end.x), edit_y, min(_sel_start.z, _sel_end.z))
 	var mx := Vector3i(max(_sel_start.x, _sel_end.x), edit_y, max(_sel_start.z, _sel_end.z))
+	var height := maxi(1, brush_height)
 	var result: Array = []
 
 	match sel_shape:
 		SelShape.RECT:
-			for x in range(mn.x, mx.x+1):
-				for z in range(mn.z, mx.z+1):
-					if sel_fill:
-						result.append(Vector3i(x, edit_y, z))
-					else:
-						# Hollow: only the border
-						if x == mn.x or x == mx.x or z == mn.z or z == mx.z:
-							result.append(Vector3i(x, edit_y, z))
-
+			_append_rect_positions(result, mn, mx)
 		SelShape.CIRCLE:
-			var cx := (_sel_start.x + _sel_end.x) / 2.0
-			var cz := (_sel_start.z + _sel_end.z) / 2.0
-			var rx := absf(_sel_end.x - _sel_start.x) / 2.0
-			var rz := absf(_sel_end.z - _sel_start.z) / 2.0
-			var rmax := maxf(rx, rz)
-			if rmax < 0.5: rmax = 0.5
-			for x in range(mn.x, mx.x+1):
-				for z in range(mn.z, mx.z+1):
-					var nx := (x - cx) / (rmax + 0.5)
-					var nz := (z - cz) / (rmax + 0.5)
-					var dist := sqrt(nx*nx + nz*nz)
-					if sel_fill:
-						if dist <= 1.0:
-							result.append(Vector3i(x, edit_y, z))
-					else:
-						# Hollow: ring
-						if dist <= 1.0 and dist >= 0.75:
-							result.append(Vector3i(x, edit_y, z))
+			_append_circle_positions(result, mn, mx)
+		SelShape.BOX:
+			_append_box_positions(result, mn, mx, height)
+		SelShape.CYLINDER:
+			_append_cylinder_positions(result, mn, mx, height)
+		SelShape.SPHERE:
+			_append_sphere_positions(result, mn, mx, height)
+		SelShape.PYRAMID:
+			_append_pyramid_positions(result, mn, mx, height)
 
 	return result
+
+
+func _append_rect_positions(result: Array, mn: Vector3i, mx: Vector3i) -> void:
+	for x in range(mn.x, mx.x + 1):
+		for z in range(mn.z, mx.z + 1):
+			if _matches_rect_outline(x, z, mn.x, mx.x, mn.z, mx.z):
+				result.append(Vector3i(x, edit_y, z))
+
+
+func _append_circle_positions(result: Array, mn: Vector3i, mx: Vector3i) -> void:
+	var cx := (mn.x + mx.x) / 2.0
+	var cz := (mn.z + mx.z) / 2.0
+	var rx := maxf((mx.x - mn.x) / 2.0, 0.5)
+	var rz := maxf((mx.z - mn.z) / 2.0, 0.5)
+	var inner_rx := rx - float(sel_border_thickness)
+	var inner_rz := rz - float(sel_border_thickness)
+	
+	for x in range(mn.x, mx.x + 1):
+		for z in range(mn.z, mx.z + 1):
+			var in_outer := _ellipse_contains(x, z, cx, cz, rx, rz)
+			if not in_outer:
+				continue
+			if sel_mode == SelMode.SOLID:
+				result.append(Vector3i(x, edit_y, z))
+			elif inner_rx <= 0.0 or inner_rz <= 0.0 or not _ellipse_contains(x, z, cx, cz, inner_rx, inner_rz):
+				result.append(Vector3i(x, edit_y, z))
+
+
+func _append_box_positions(result: Array, mn: Vector3i, mx: Vector3i, height: int) -> void:
+	var top_y := edit_y + height - 1
+	for x in range(mn.x, mx.x + 1):
+		for y in range(edit_y, top_y + 1):
+			for z in range(mn.z, mx.z + 1):
+				if _matches_box_mode(x, y, z, mn.x, mx.x, edit_y, top_y, mn.z, mx.z):
+					result.append(Vector3i(x, y, z))
+
+
+func _append_cylinder_positions(result: Array, mn: Vector3i, mx: Vector3i, height: int) -> void:
+	var cx := (mn.x + mx.x) / 2.0
+	var cz := (mn.z + mx.z) / 2.0
+	var rx := maxf((mx.x - mn.x) / 2.0, 0.5)
+	var rz := maxf((mx.z - mn.z) / 2.0, 0.5)
+	var inner_rx := rx - float(sel_border_thickness)
+	var inner_rz := rz - float(sel_border_thickness)
+	var top_y := edit_y + height - 1
+	
+	for x in range(mn.x, mx.x + 1):
+		for y in range(edit_y, top_y + 1):
+			for z in range(mn.z, mx.z + 1):
+				var in_outer := _ellipse_contains(x, z, cx, cz, rx, rz)
+				if not in_outer:
+					continue
+				if sel_mode == SelMode.SOLID:
+					result.append(Vector3i(x, y, z))
+					continue
+				
+				var near_y := _is_near_edge(y, edit_y, top_y)
+				var in_inner := inner_rx > 0.0 and inner_rz > 0.0 and _ellipse_contains(x, z, cx, cz, inner_rx, inner_rz)
+				var on_wall := not in_inner
+				if sel_mode == SelMode.HOLLOW:
+					if on_wall or near_y:
+						result.append(Vector3i(x, y, z))
+				elif on_wall:
+					result.append(Vector3i(x, y, z))
+
+
+func _append_sphere_positions(result: Array, mn: Vector3i, mx: Vector3i, height: int) -> void:
+	var top_y := edit_y + height - 1
+	var cx := (mn.x + mx.x) / 2.0
+	var cy := (edit_y + top_y) / 2.0
+	var cz := (mn.z + mx.z) / 2.0
+	var rx := maxf((mx.x - mn.x) / 2.0, 0.5)
+	var ry := maxf((top_y - edit_y) / 2.0, 0.5)
+	var rz := maxf((mx.z - mn.z) / 2.0, 0.5)
+	
+	for x in range(mn.x, mx.x + 1):
+		for y in range(edit_y, top_y + 1):
+			for z in range(mn.z, mx.z + 1):
+				var outer := _ellipsoid_value(x, y, z, cx, cy, cz, rx, ry, rz)
+				if outer > 1.0:
+					continue
+				if sel_mode == SelMode.SOLID:
+					result.append(Vector3i(x, y, z))
+					continue
+				
+				var inner_rx := rx - float(sel_border_thickness)
+				var inner_ry := ry - float(sel_border_thickness)
+				var inner_rz := rz - float(sel_border_thickness)
+				if inner_rx <= 0.0 or inner_ry <= 0.0 or inner_rz <= 0.0:
+					result.append(Vector3i(x, y, z))
+					continue
+				
+				var inner := _ellipsoid_value(x, y, z, cx, cy, cz, inner_rx, inner_ry, inner_rz)
+				if inner > 1.0:
+					result.append(Vector3i(x, y, z))
+
+
+func _append_pyramid_positions(result: Array, mn: Vector3i, mx: Vector3i, height: int) -> void:
+	var total_levels := maxi(1, height)
+	for level in range(total_levels):
+		var t := float(level) / maxf(float(total_levels - 1), 1.0)
+		var inset_x := int(round(t * float(mx.x - mn.x) * 0.5))
+		var inset_z := int(round(t * float(mx.z - mn.z) * 0.5))
+		var layer_min_x := mn.x + inset_x
+		var layer_max_x := mx.x - inset_x
+		var layer_min_z := mn.z + inset_z
+		var layer_max_z := mx.z - inset_z
+		var y := edit_y + level
+		
+		if layer_min_x > layer_max_x or layer_min_z > layer_max_z:
+			var peak := Vector3i(roundi((mn.x + mx.x) * 0.5), y, roundi((mn.z + mx.z) * 0.5))
+			result.append(peak)
+			continue
+		
+		for x in range(layer_min_x, layer_max_x + 1):
+			for z in range(layer_min_z, layer_max_z + 1):
+				if sel_mode == SelMode.SOLID:
+					result.append(Vector3i(x, y, z))
+					continue
+				var on_edge := _matches_rect_outline(x, z, layer_min_x, layer_max_x, layer_min_z, layer_max_z)
+				if on_edge:
+					result.append(Vector3i(x, y, z))
+
+
+func _matches_rect_outline(x: int, z: int, min_x: int, max_x: int, min_z: int, max_z: int) -> bool:
+	if sel_mode == SelMode.SOLID:
+		return true
+	return _is_near_edge(x, min_x, max_x) or _is_near_edge(z, min_z, max_z)
+
+
+func _matches_box_mode(x: int, y: int, z: int, min_x: int, max_x: int, min_y: int, max_y: int, min_z: int, max_z: int) -> bool:
+	if sel_mode == SelMode.SOLID:
+		return true
+	
+	var near_x := _is_near_edge(x, min_x, max_x)
+	var near_y := _is_near_edge(y, min_y, max_y)
+	var near_z := _is_near_edge(z, min_z, max_z)
+	
+	if sel_mode == SelMode.HOLLOW:
+		return near_x or near_y or near_z
+	
+	var edges_hit := int(near_x) + int(near_y) + int(near_z)
+	return edges_hit >= 2
+
+
+func _is_near_edge(value: int, min_value: int, max_value: int) -> bool:
+	var thickness := clampi(sel_border_thickness, 1, maxi(max_value - min_value + 1, 1))
+	return value - min_value < thickness or max_value - value < thickness
+
+
+func _ellipse_contains(x: int, z: int, cx: float, cz: float, rx: float, rz: float) -> bool:
+	var safe_rx := maxf(rx + 0.5, 0.5)
+	var safe_rz := maxf(rz + 0.5, 0.5)
+	var nx := (x - cx) / safe_rx
+	var nz := (z - cz) / safe_rz
+	return nx * nx + nz * nz <= 1.0
+
+
+func _ellipsoid_value(x: int, y: int, z: int, cx: float, cy: float, cz: float, rx: float, ry: float, rz: float) -> float:
+	var safe_rx := maxf(rx + 0.5, 0.5)
+	var safe_ry := maxf(ry + 0.5, 0.5)
+	var safe_rz := maxf(rz + 0.5, 0.5)
+	var nx := (x - cx) / safe_rx
+	var ny := (y - cy) / safe_ry
+	var nz := (z - cz) / safe_rz
+	return nx * nx + ny * ny + nz * nz
 
 
 # ── Preview helpers ───────────────────────────────────────────────────────────
@@ -315,10 +492,16 @@ func _update_sel_preview() -> void:
 		_sel_preview.visible = false
 		return
 	_sel_preview.visible = true
-	var mn_xz := Vector2i(min(_sel_start.x,_sel_end.x), min(_sel_start.z,_sel_end.z))
-	var mx_xz := Vector2i(max(_sel_start.x,_sel_end.x), max(_sel_start.z,_sel_end.z))
-	var sz := Vector3(mx_xz.x-mn_xz.x+1, 0.15, mx_xz.y-mn_xz.y+1)
-	var ct := Vector3((mn_xz.x+mx_xz.x)*0.5, float(edit_y), (mn_xz.y+mx_xz.y)*0.5)
+	var mn_xz := Vector2i(min(_sel_start.x, _sel_end.x), min(_sel_start.z, _sel_end.z))
+	var mx_xz := Vector2i(max(_sel_start.x, _sel_end.x), max(_sel_start.z, _sel_end.z))
+	var preview_height := 0.15
+	if sel_shape in [SelShape.BOX, SelShape.CYLINDER, SelShape.SPHERE, SelShape.PYRAMID]:
+		preview_height = float(maxi(1, brush_height))
+	var sz := Vector3(mx_xz.x - mn_xz.x + 1, preview_height, mx_xz.y - mn_xz.y + 1)
+	var center_y := float(edit_y)
+	if preview_height > 0.2:
+		center_y = float(edit_y) + (preview_height - 1.0) * 0.5
+	var ct := Vector3((mn_xz.x + mx_xz.x) * 0.5, center_y, (mn_xz.y + mx_xz.y) * 0.5)
 	_sel_preview.position = ct
 	(_sel_preview.mesh as BoxMesh).size = sz
 

@@ -259,6 +259,11 @@ const CHUNK_SIZE       : int = 16
 # ── GIZMO ─────────────────────────────────────────────────────────────────────
 @onready var _axis_gizmo  = %AxisGizmo  
 
+var _sel_shape_pick  : OptionButton = null
+var _sel_mode_pick   : OptionButton = null
+var _sel_action_pick : OptionButton = null
+var _sel_border_spin : SpinBox = null
+
 
 
 
@@ -268,6 +273,7 @@ func _ready() -> void:
 	_build_palette()
 	_build_menus()
 	_init_dialogs()
+	_ensure_selection_controls()
 	_connect_signals()
 	_refresh_groups()
 	_rebuild_cam_list()
@@ -721,6 +727,180 @@ func _filter_palette(search_text: String) -> void:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+#  SELECTION UI ENHANCEMENTS
+# ═════════════════════════════════════════════════════════════════════════════
+
+func _ensure_selection_controls() -> void:
+	var left_vbox := get_node_or_null("RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox") as VBoxContainer
+	if left_vbox == null:
+		return
+	
+	_btn_sel_rect.text = "Rect"
+	_btn_sel_circle.text = "Circle"
+	_sel_fill_chk.visible = false
+	
+	var insert_at := left_vbox.get_children().find(_sel_fill_chk)
+	if insert_at < 0:
+		insert_at = left_vbox.get_child_count()
+	
+	var shape_row := left_vbox.get_node_or_null("SelShapeAdvancedRow") as HBoxContainer
+	if shape_row == null:
+		shape_row = HBoxContainer.new()
+		shape_row.name = "SelShapeAdvancedRow"
+		shape_row.add_theme_constant_override("separation", 6)
+		
+		var shape_lbl := Label.new()
+		shape_lbl.text = "Shape"
+		shape_row.add_child(shape_lbl)
+		
+		_sel_shape_pick = OptionButton.new()
+		_sel_shape_pick.name = "SelShapeOption"
+		_sel_shape_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_sel_shape_pick.add_item("Rectangle", BlockEditor.SelShape.RECT)
+		_sel_shape_pick.add_item("Circle", BlockEditor.SelShape.CIRCLE)
+		_sel_shape_pick.add_item("Box / Cube", BlockEditor.SelShape.BOX)
+		_sel_shape_pick.add_item("Cylinder", BlockEditor.SelShape.CYLINDER)
+		_sel_shape_pick.add_item("Sphere", BlockEditor.SelShape.SPHERE)
+		_sel_shape_pick.add_item("Pyramid", BlockEditor.SelShape.PYRAMID)
+		shape_row.add_child(_sel_shape_pick)
+		
+		left_vbox.add_child(shape_row)
+		left_vbox.move_child(shape_row, mini(insert_at + 1, left_vbox.get_child_count() - 1))
+	else:
+		_sel_shape_pick = shape_row.get_node_or_null("SelShapeOption") as OptionButton
+	
+	if _sel_shape_pick:
+		_sel_shape_pick.clear()
+		_sel_shape_pick.add_item("Rectangle", BlockEditor.SelShape.RECT)
+		_sel_shape_pick.add_item("Circle", BlockEditor.SelShape.CIRCLE)
+		_sel_shape_pick.add_item("Box / Cube", BlockEditor.SelShape.BOX)
+		_sel_shape_pick.add_item("Cylinder", BlockEditor.SelShape.CYLINDER)
+		_sel_shape_pick.add_item("Sphere", BlockEditor.SelShape.SPHERE)
+		_sel_shape_pick.add_item("Pyramid", BlockEditor.SelShape.PYRAMID)
+	
+	var mode_row := left_vbox.get_node_or_null("SelModeRow") as HBoxContainer
+	if mode_row == null:
+		mode_row = HBoxContainer.new()
+		mode_row.name = "SelModeRow"
+		mode_row.add_theme_constant_override("separation", 6)
+		
+		var mode_lbl := Label.new()
+		mode_lbl.text = "Mode"
+		mode_row.add_child(mode_lbl)
+		
+		_sel_mode_pick = OptionButton.new()
+		_sel_mode_pick.name = "SelModeOption"
+		_sel_mode_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_sel_mode_pick.add_item("Filled", BlockEditor.SelMode.SOLID)
+		_sel_mode_pick.add_item("Hollow", BlockEditor.SelMode.HOLLOW)
+		_sel_mode_pick.add_item("Border", BlockEditor.SelMode.BORDER)
+		mode_row.add_child(_sel_mode_pick)
+		
+		left_vbox.add_child(mode_row)
+		left_vbox.move_child(mode_row, mini(insert_at + 2, left_vbox.get_child_count() - 1))
+	else:
+		_sel_mode_pick = mode_row.get_node_or_null("SelModeOption") as OptionButton
+	
+	if _sel_mode_pick:
+		_sel_mode_pick.clear()
+		_sel_mode_pick.add_item("Filled", BlockEditor.SelMode.SOLID)
+		_sel_mode_pick.add_item("Hollow", BlockEditor.SelMode.HOLLOW)
+		_sel_mode_pick.add_item("Border", BlockEditor.SelMode.BORDER)
+	
+	var action_row := left_vbox.get_node_or_null("SelActionRow") as HBoxContainer
+	if action_row == null:
+		action_row = HBoxContainer.new()
+		action_row.name = "SelActionRow"
+		action_row.add_theme_constant_override("separation", 6)
+		
+		var action_lbl := Label.new()
+		action_lbl.text = "Action"
+		action_row.add_child(action_lbl)
+		
+		_sel_action_pick = OptionButton.new()
+		_sel_action_pick.name = "SelActionOption"
+		_sel_action_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		action_row.add_child(_sel_action_pick)
+		
+		left_vbox.add_child(action_row)
+		left_vbox.move_child(action_row, mini(insert_at + 3, left_vbox.get_child_count() - 1))
+	else:
+		_sel_action_pick = action_row.get_node_or_null("SelActionOption") as OptionButton
+	
+	if _sel_action_pick:
+		_sel_action_pick.clear()
+		_sel_action_pick.add_item("Place Blocks", BlockEditor.SelAction.PAINT)
+		_sel_action_pick.add_item("Erase Blocks", BlockEditor.SelAction.ERASE)
+	
+	var border_row := left_vbox.get_node_or_null("SelBorderRow") as HBoxContainer
+	if border_row == null:
+		border_row = HBoxContainer.new()
+		border_row.name = "SelBorderRow"
+		border_row.add_theme_constant_override("separation", 6)
+		
+		var border_lbl := Label.new()
+		border_lbl.text = "Border"
+		border_row.add_child(border_lbl)
+		
+		_sel_border_spin = SpinBox.new()
+		_sel_border_spin.name = "SelBorderSpin"
+		_sel_border_spin.min_value = 1
+		_sel_border_spin.max_value = 16
+		_sel_border_spin.step = 1
+		_sel_border_spin.value = 1
+		_sel_border_spin.custom_minimum_size = Vector2(80, 0)
+		border_row.add_child(_sel_border_spin)
+		
+		left_vbox.add_child(border_row)
+		left_vbox.move_child(border_row, mini(insert_at + 4, left_vbox.get_child_count() - 1))
+	else:
+		_sel_border_spin = border_row.get_node_or_null("SelBorderSpin") as SpinBox
+	
+	if _sel_shape_pick:
+		_sel_shape_pick.select(int(_editor.sel_shape))
+	if _sel_mode_pick:
+		_sel_mode_pick.select(int(_editor.sel_mode))
+	if _sel_action_pick:
+		_sel_action_pick.select(int(_editor.sel_action))
+	if _sel_border_spin:
+		_sel_border_spin.value = _editor.sel_border_thickness
+	_refresh_selection_ui()
+
+
+func _select_selection_shape(shape: int) -> void:
+	_editor.set_sel_shape(shape)
+	_btn_sel_rect.button_pressed = (shape == BlockEditor.SelShape.RECT)
+	_btn_sel_circle.button_pressed = (shape == BlockEditor.SelShape.CIRCLE)
+	if _sel_shape_pick and _sel_shape_pick.selected != int(shape):
+		_sel_shape_pick.select(int(shape))
+
+
+func _set_selection_mode(mode: int) -> void:
+	_editor.set_sel_mode(mode)
+	if _sel_mode_pick and _sel_mode_pick.selected != int(mode):
+		_sel_mode_pick.select(int(mode))
+	_refresh_selection_ui()
+
+
+func _set_selection_action(action: int) -> void:
+	_editor.set_sel_action(action)
+	if _sel_action_pick and _sel_action_pick.selected != int(action):
+		_sel_action_pick.select(int(action))
+	_sel_apply_btn.text = "Apply Selection (Erase)" if action == BlockEditor.SelAction.ERASE else "Apply Selection (Place)"
+
+
+func _refresh_selection_ui() -> void:
+	if _sel_border_spin and is_instance_valid(_sel_border_spin):
+		var show_border := true
+		if _sel_mode_pick:
+			show_border = _sel_mode_pick.selected != int(BlockEditor.SelMode.SOLID)
+		_sel_border_spin.get_parent().visible = show_border
+	if _sel_action_pick and _sel_action_pick.selected < 0:
+		_sel_action_pick.select(int(_editor.sel_action))
+	_set_selection_action(_sel_action_pick.selected if _sel_action_pick else int(_editor.sel_action))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 #  MENUS
 # ═════════════════════════════════════════════════════════════════════════════
 
@@ -766,8 +946,14 @@ func _build_menus() -> void:
 func _connect_signals() -> void:
 	# Mode buttons
 	_btn_nav.pressed.connect(func(): _set_tool(BlockEditor.Tool.SELECT))
-	_btn_paint.pressed.connect(func(): _set_tool(BlockEditor.Tool.PAINT))
-	_btn_erase.pressed.connect(func(): _set_tool(BlockEditor.Tool.ERASE))
+	_btn_paint.pressed.connect(func():
+		_set_selection_action(BlockEditor.SelAction.PAINT)
+		_set_tool(BlockEditor.Tool.PAINT)
+	)
+	_btn_erase.pressed.connect(func():
+		_set_selection_action(BlockEditor.SelAction.ERASE)
+		_set_tool(BlockEditor.Tool.ERASE)
+	)
 	_btn_select.pressed.connect(func(): _set_tool(BlockEditor.Tool.SHAPE_SELECT))
 
 	# Block name
@@ -790,16 +976,33 @@ func _connect_signals() -> void:
 
 	# Selection shape
 	_btn_sel_rect.pressed.connect(func():
-		_btn_sel_rect.button_pressed = true
-		_btn_sel_circle.button_pressed = false
-		_editor.set_sel_shape(BlockEditor.SelShape.RECT)
+		_select_selection_shape(BlockEditor.SelShape.RECT)
 	)
 	_btn_sel_circle.pressed.connect(func():
-		_btn_sel_circle.button_pressed = true
-		_btn_sel_rect.button_pressed = false
-		_editor.set_sel_shape(BlockEditor.SelShape.CIRCLE)
+		_select_selection_shape(BlockEditor.SelShape.CIRCLE)
 	)
-	_sel_fill_chk.toggled.connect(func(v): _editor.set_sel_fill(v))
+	_sel_fill_chk.toggled.connect(func(v):
+		if _sel_mode_pick == null:
+			_editor.set_sel_fill(v)
+		else:
+			_set_selection_mode(BlockEditor.SelMode.SOLID if v else BlockEditor.SelMode.HOLLOW)
+	)
+	if _sel_shape_pick:
+		_sel_shape_pick.item_selected.connect(func(index):
+			_select_selection_shape(index)
+		)
+	if _sel_mode_pick:
+		_sel_mode_pick.item_selected.connect(func(index):
+			_set_selection_mode(index)
+		)
+	if _sel_action_pick:
+		_sel_action_pick.item_selected.connect(func(index):
+			_set_selection_action(index)
+		)
+	if _sel_border_spin:
+		_sel_border_spin.value_changed.connect(func(v):
+			_editor.set_sel_border_thickness(int(v))
+		)
 	_sel_apply_btn.pressed.connect(func(): _editor.apply_selection(); _status("Selection applied."))
 	_sel_clear_btn.pressed.connect(func(): _editor.clear_selection(); _status("Selection cleared."))
 
@@ -1234,8 +1437,12 @@ func _show_controls_dlg() -> void:
 
 [color=#ffcc77]─── Selection Tool ───[/color]
 • Switch to [b]Select[/b] mode
-• Left click and drag to create rectangle or circle
-• Check [b]Fill[/b] if you want to fill the interior
+• Drag to define the base area of the shape
+• Use [b]Shape[/b] to choose Rectangle, Circle, Box, Cylinder, Sphere or Pyramid
+• Use [b]Mode[/b] to choose Filled, Hollow or Border
+• Use [b]Action[/b] to place or erase the selected blocks
+• [b]Brush Height[/b] controls the height of 3D shapes
+• [b]Border[/b] controls shell / outline thickness
 • Press [b]Apply[/b] to execute the selection
 
 [color=#ffcc77]─── Groups & Cameras ───[/color]
@@ -1539,7 +1746,7 @@ func _set_tool(t: BlockEditor.Tool) -> void:
 		BlockEditor.Tool.SELECT:       _status("Navigate — orbit/pan/zoom freely")
 		BlockEditor.Tool.PAINT:        _status("Paint — click to place blocks")
 		BlockEditor.Tool.ERASE:        _status("Erase — click to remove blocks")
-		BlockEditor.Tool.SHAPE_SELECT: _status("Select — drag to define shape, then Apply")
+		BlockEditor.Tool.SHAPE_SELECT: _status("Select — drag a 2D/3D shape, adjust mode/height, then Apply")
 
 
 func _pick_palette_block(bname: String) -> void:
