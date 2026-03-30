@@ -628,7 +628,7 @@ func _build_palette() -> void:
 		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 		
 		var grid := GridContainer.new()
-		grid.columns = 3
+		grid.columns = 4
 		grid.add_theme_constant_override("h_separation", 6)
 		grid.add_theme_constant_override("v_separation", 6)
 		scroll.add_child(grid)
