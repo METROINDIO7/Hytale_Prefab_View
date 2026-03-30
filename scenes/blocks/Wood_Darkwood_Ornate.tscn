@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="WoodDarkwoodOrnate" instance=ExtResource("1_base")]
+block_id = "Wood_Darkwood_Ornate"
+display_name = "Wood Darkwood Ornate"
+category = "Wood Orn"
+search_tags = PackedStringArray("wood", "darkwood", "ornate")
+fallback_color = Color(0.48, 0.35, 0.25, 1)

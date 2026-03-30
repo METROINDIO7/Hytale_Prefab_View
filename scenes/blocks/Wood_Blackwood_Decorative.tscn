@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="WoodBlackwoodDecorative" instance=ExtResource("1_base")]
+block_id = "Wood_Blackwood_Decorative"
+display_name = "Wood Blackwood Decorative"
+category = "Wood Dec"
+search_tags = PackedStringArray("wood", "blackwood", "decorative")
+fallback_color = Color(0.40, 0.30, 0.25, 1)

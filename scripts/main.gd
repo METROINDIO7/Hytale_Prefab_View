@@ -80,6 +80,8 @@ var _active_tool  : BlockEditor.Tool = BlockEditor.Tool.SELECT
 var _bottom_open  : bool   = true
 var _grid_mesh    : MeshInstance3D
 
+const BLOCK_BUTTON_SCENE := preload("res://scenes/block_palette_button.tscn")
+
 # ═══ BLOCK PALETTE (Organized by category - 1x1 blocks only) ═══════════════════
 const BLOCK_PALETTE : Dictionary = {
 	# ── ROCK FAMILY ────────────────────────────────────────────────────────────
@@ -246,6 +248,7 @@ var _palette_buttons : Array = []
 # ── UNDO/REDO SYSTEM ──────────────────────────────────────────────────────────
 var _undo_stack : Array = []
 var _redo_stack : Array = []
+var _last_block_state : Dictionary = {}
 const MAX_UNDO_STEPS := 50
 
 # ── OCCLUSION CULLING ─────────────────────────────────────────────────────────
@@ -282,6 +285,8 @@ func _ready() -> void:
 		view_pm.about_to_popup.connect(func():
 			_refresh_view_menu_checks(view_pm)
 		)
+	
+	_sync_undo_baseline(true)
 
 
 
@@ -296,6 +301,7 @@ func _on_file_menu(id: int) -> void:
 			_renderer.clear_all()
 			_refresh_groups()
 			_clear_all_cameras()  # ✅ NUEVO: Limpiar cámaras
+			_sync_undo_baseline(true)
 			_status("New project.")
 		11: _dlg_open.popup_centered(Vector2i(900,620))
 		12: _dlg_save.popup_centered(Vector2i(900,620))
@@ -602,26 +608,31 @@ func _build_palette() -> void:
 	if _palette_tabs == null:
 		_create_palette_nodes()
 	
+	for child in _palette_tabs.get_children():
+		child.queue_free()
+	
+	BlockCatalog.reload()
+	var palette_map = BlockCatalog.get_palette_map(BLOCK_PALETTE)
+	
 	# Create tab for each category
-	for cat_name in BLOCK_PALETTE.keys():
+	for cat_name in palette_map.keys():
 		var scroll := ScrollContainer.new()
 		scroll.custom_minimum_size = Vector2(0, 180)
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 		
 		var grid := GridContainer.new()
-		grid.columns = 4
-		grid.add_theme_constant_override("h_separation", 4)
-		grid.add_theme_constant_override("v_separation", 4)
+		grid.columns = 3
+		grid.add_theme_constant_override("h_separation", 6)
+		grid.add_theme_constant_override("v_separation", 6)
 		scroll.add_child(grid)
 		
 		_palette_tabs.add_child(scroll)
 		var tab_idx := _palette_tabs.get_tab_count() - 1
-		_palette_tabs.set_tab_title(tab_idx, cat_name)
+		_palette_tabs.set_tab_title(tab_idx, String(cat_name))
 		
-		# Add buttons for each block in category
-		for bname in BLOCK_PALETTE[cat_name]:
-			var btn := _create_block_button(bname)
+		for bname in palette_map[cat_name]:
+			var btn := _create_block_button(String(bname), String(cat_name))
 			grid.add_child(btn)
 			_palette_buttons.append(btn)
 
@@ -653,18 +664,28 @@ func _create_palette_nodes() -> void:
 	# Connect search signal
 	search.text_changed.connect(_filter_palette)
 
-func _create_block_button(bname: String) -> Button:
-	var parts := bname.split("_")
-	var display := "_".join(parts.slice(maxi(0, parts.size()-2), parts.size()))
+func _create_block_button(bname: String, category: String = "") -> Button:
+	var btn: Button = null
+	var custom_scene := BlockCatalog.get_scene_for(bname)
 	
-	var btn := Button.new()
-	btn.text = display
-	btn.tooltip_text = bname
-	btn.custom_minimum_size = Vector2(140, 28)
-	btn.add_theme_font_size_override("font_size", 9)
+	if custom_scene != null:
+		btn = custom_scene.instantiate() as Button
+	else:
+		var fallback_btn := BLOCK_BUTTON_SCENE.instantiate() as BlockPaletteButton
+		fallback_btn.configure_fallback(bname, category, _renderer.get_preview_color(bname))
+		btn = fallback_btn
+	
+	if btn == null:
+		btn = Button.new()
+		btn.text = bname.replace("_", " ")
+		btn.tooltip_text = bname
+		btn.custom_minimum_size = Vector2(140, 28)
+	
+	if btn is BlockPaletteButton:
+		(btn as BlockPaletteButton).refresh_visuals()
+	
 	btn.set_meta("block_name", bname)
 	btn.pressed.connect(_on_palette_button_pressed.bind(btn))
-	
 	return btn
 
 
@@ -675,16 +696,20 @@ func _on_palette_button_pressed(btn: Button) -> void:
 
 # Search filter function
 func _filter_palette(search_text: String) -> void:
-	var query := search_text.to_lower()
+	var query := search_text.to_lower().strip_edges()
 	
 	for btn in _palette_buttons:
-		var bname := btn.get_meta("block_name") as String
-		var matches := query.is_empty() or bname.to_lower().contains(query)
+		var matches := true
+		if btn is BlockPaletteButton:
+			matches = (btn as BlockPaletteButton).matches_query(query)
+		else:
+			var bname := btn.get_meta("block_name") as String
+			matches = query.is_empty() or bname.to_lower().contains(query)
 		btn.visible = matches
 	
 	# Optionally switch to first tab with visible buttons
 	if not query.is_empty():
-		for i in _palette_tabs.get_tab_count():
+		for i in range(_palette_tabs.get_tab_count()):
 			var tab := _palette_tabs.get_child(i)
 			if tab is ScrollContainer:
 				var grid := tab.get_child(0)
@@ -849,10 +874,46 @@ func _connect_signals() -> void:
 #  UNDO/REDO SYSTEM
 # ═════════════════════════════════════════════════════════════════════════════
 
+func _capture_block_state() -> Dictionary:
+	var groups_data := {}
+	for gn in _renderer.get_group_names():
+		var gd: BlockRenderer.GroupData = _renderer.get_group_data(gn)
+		if gd == null:
+			continue
+		groups_data[gn] = {
+			"blocks": gd.blocks.duplicate(true),
+			"visible": gd.node.visible,
+			"label": gd.label
+		}
+	return {"groups": groups_data}
+
+
+func _sync_undo_baseline(clear_history: bool = false) -> void:
+	_last_block_state = _capture_block_state()
+	if clear_history:
+		_undo_stack.clear()
+		_redo_stack.clear()
+
+
+func _get_undo_action_name() -> String:
+	match _active_tool:
+		BlockEditor.Tool.PAINT:
+			return "Paint"
+		BlockEditor.Tool.ERASE:
+			return "Erase"
+		BlockEditor.Tool.SHAPE_SELECT:
+			return "Selection"
+		_:
+			return "Edit"
+
+
 func _on_editor_action() -> void:
-	# Esta función se llama después de cada acción del editor
-	# Guardamos el estado actual para poder deshacer
-	pass  # El tracking se hace en las funciones de add/remove block
+	var current_state := _capture_block_state()
+	if current_state == _last_block_state:
+		return
+	
+	_push_undo(_get_undo_action_name(), _last_block_state, current_state)
+	_last_block_state = current_state
 
 
 func _push_undo(action: String, before: Dictionary, after: Dictionary) -> void:
@@ -882,6 +943,7 @@ func _do_undo() -> void:
 	
 	# Restaurar estado "before"
 	_restore_block_state(action["before"])
+	_last_block_state = action["before"].duplicate(true)
 	_status("↩ Undo: %s" % action["action"])
 
 
@@ -895,6 +957,7 @@ func _do_redo() -> void:
 	
 	# Restaurar estado "after"
 	_restore_block_state(action["after"])
+	_last_block_state = action["after"].duplicate(true)
 	_status("↪ Redo: %s" % action["action"])
 
 
@@ -941,7 +1004,7 @@ func _on_blocks_changed(total: int, unique_types: int) -> void:
 
 func _input(event: InputEvent) -> void:
 	# Manejar atajos de teclado para undo/redo
-	if event is InputEventKey and event.pressed:
+	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_Z and event.ctrl_pressed and not event.shift_pressed:
 			_do_undo()
 			get_viewport().set_input_as_handled()
@@ -1312,6 +1375,8 @@ func _apply_project(data: Dictionary) -> void:  # ✅ Agregado tipo de parámetr
 	# ── Restore app state ─────────────────────────────────────────────────────
 	if data.has("state"):
 		_restore_state(data["state"])
+	
+	_sync_undo_baseline(true)
 
 
 
@@ -1326,6 +1391,7 @@ func _do_import(path: String) -> void:
 	_renderer.load_from_prefab(data)
 	_cam_ctrl.focus_on(_renderer.get_center())
 	_refresh_groups()
+	_sync_undo_baseline(true)
 	_status("✅ Imported: %s" % path.get_file())
 
 
@@ -1366,7 +1432,10 @@ func _refresh_groups() -> void:
 		eye.button_pressed = gd.node.visible
 		eye.custom_minimum_size = Vector2(20, 0)
 		var cap = gn
-		eye.toggled.connect(func(v): _renderer.set_group_visible(cap, v))
+		eye.toggled.connect(func(v):
+			_renderer.set_group_visible(cap, v)
+			_sync_undo_baseline()
+		)
 		row.add_child(eye)
 
 		var label_text = gd.label if gd.label != "" else gn
@@ -1406,6 +1475,7 @@ func _on_add_group() -> void:
 		_renderer.create_group(n)
 		_editor.set_active_group(n)
 		_refresh_groups()
+		_sync_undo_baseline()
 		_status("Group '%s' created." % n)
 		d.queue_free()
 	)
@@ -1423,6 +1493,7 @@ func _on_remove_group() -> void:
 	_renderer.remove_group(gn)
 	_editor.set_active_group("Default")
 	_refresh_groups()
+	_sync_undo_baseline()
 	_status("Group '%s' removed (blocks moved to Default)." % gn)
 
 
@@ -1445,6 +1516,7 @@ func _rename_group(gn: String) -> void:
 	d.confirmed.connect(func():
 		_renderer.rename_group_label(gn, le.text.strip_edges())
 		_refresh_groups()
+		_sync_undo_baseline()
 		d.queue_free()
 	)
 	d.canceled.connect(d.queue_free)

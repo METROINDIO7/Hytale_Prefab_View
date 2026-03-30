@@ -22,8 +22,13 @@ const GROUP_COLORS : Array = [
 ]
 
 # ── Instance variables ────────────────────────────────────────────────────────
-var _groups      : Dictionary = {}
-var _color_index : int = 0
+var _groups            : Dictionary = {}
+var _color_index       : int = 0
+var _render_mesh_cache : Dictionary = {}
+var _dirty_groups      : Dictionary = {}
+var _rebuild_scheduled : bool = false
+var _bulk_edit_depth   : int = 0
+var _needs_change_emit : bool = false
 
 # ── Categories for auto-color (Based on actual Hytale block names) ───────────
 # Only 1x1 full cube blocks included (no stairs, roofs, half, beams, etc.)
@@ -406,6 +411,10 @@ func get_group_data(gname: String) -> GroupData:
 	return _groups.get(gname, null)
 
 
+func get_preview_color(bname: String) -> Color:
+	return _get_color(bname)
+
+
 func show_all_groups() -> void:
 	for gn in _groups:
 		(_groups[gn] as GroupData).node.visible = true
@@ -418,18 +427,38 @@ func hide_all_groups() -> void:
 
 # ── Block CRUD ────────────────────────────────────────────────────────────────
 
-func add_block(pos: Vector3i, bname: String, group: String = DEFAULT_GROUP) -> void:
+func begin_bulk_edit() -> void:
+	_bulk_edit_depth += 1
+
+
+func end_bulk_edit() -> void:
+	_bulk_edit_depth = maxi(0, _bulk_edit_depth - 1)
+	if _bulk_edit_depth == 0:
+		_queue_rebuild_flush()
+
+
+func add_block(pos: Vector3i, bname: String, group: String = DEFAULT_GROUP) -> bool:
 	if not _groups.has(group):
 		create_group(group)
-	_groups[group].blocks[_key(pos.x, pos.y, pos.z)] = bname
+	
+	var key := _key(pos.x, pos.y, pos.z)
+	var old_value = (_groups[group] as GroupData).blocks.get(key, null)
+	if old_value == bname:
+		return false
+	
+	(_groups[group] as GroupData).blocks[key] = bname
+	_mark_group_dirty(group)
+	return true
 
 
-func remove_block(pos: Vector3i) -> void:
+func remove_block(pos: Vector3i) -> bool:
 	var k := _key(pos.x, pos.y, pos.z)
 	for gn in _groups:
 		if (_groups[gn] as GroupData).blocks.has(k):
 			(_groups[gn] as GroupData).blocks.erase(k)
-			return
+			_mark_group_dirty(String(gn))
+			return true
+	return false
 
 
 func has_block(pos: Vector3i) -> bool:
@@ -480,15 +509,48 @@ func clear_all() -> void:
 		(_groups[gn] as GroupData).node.queue_free()
 	_groups.clear()
 	_color_index = 0
+	_render_mesh_cache.clear()
+	_dirty_groups.clear()
+	_rebuild_scheduled = false
+	_bulk_edit_depth = 0
+	_needs_change_emit = false
 	create_group(DEFAULT_GROUP)
 
 
 # ── Rebuild geometry ──────────────────────────────────────────────────────────
 
 func rebuild_all() -> void:
+	_dirty_groups.clear()
+	_rebuild_scheduled = false
 	for gn in _groups:
 		rebuild_group(gn)
+	_needs_change_emit = false
 	_emit_changed()
+
+
+func _mark_group_dirty(gname: String) -> void:
+	_dirty_groups[gname] = true
+	_needs_change_emit = true
+	_queue_rebuild_flush()
+
+
+func _queue_rebuild_flush() -> void:
+	if _rebuild_scheduled:
+		return
+	_rebuild_scheduled = true
+	call_deferred("_flush_dirty_groups")
+
+
+func _flush_dirty_groups() -> void:
+	_rebuild_scheduled = false
+	var dirty_names := _dirty_groups.keys()
+	_dirty_groups.clear()
+	for gn in dirty_names:
+		rebuild_group(String(gn))
+	
+	if _bulk_edit_depth == 0 and _needs_change_emit:
+		_needs_change_emit = false
+		_emit_changed()
 
 
 func rebuild_group(gname: String) -> void:
@@ -504,37 +566,78 @@ func rebuild_group(gname: String) -> void:
 	var batches: Dictionary = {}
 	for k in gd.blocks:
 		var bname: String = gd.blocks[k]
-		var color := _get_color(bname)
-		var ckey := "%s|%s|%s|%s" % [color.r, color.g, color.b, color.a]
-		if not batches.has(ckey):
-			batches[ckey] = {"color": color, "transforms": []}
+		if not batches.has(bname):
+			batches[bname] = {
+				"mesh": _get_render_mesh(bname),
+				"transforms": []
+			}
 		var p = k.split(",")
 		var t := Transform3D()
 		t.origin = Vector3(int(p[0]), int(p[1]), int(p[2])) * BLOCK_SIZE
-		batches[ckey]["transforms"].append(t)
+		batches[bname]["transforms"].append(t)
 
-	for ckey in batches:
-		var col: Color = batches[ckey]["color"]
-		var tfs: Array = batches[ckey]["transforms"]
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = col
-		mat.roughness = 0.75
-		mat.metallic = 0.05
-		if col.a < 1.0:
-			mat.transparency = StandardMaterial3D.TRANSPARENCY_ALPHA
-			mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		var box := BoxMesh.new()
-		box.size = Vector3.ONE * (BLOCK_SIZE * 0.97)
-		box.material = mat
+	for bname in batches:
+		var mesh: Mesh = batches[bname]["mesh"]
+		var tfs: Array = batches[bname]["transforms"]
+		if mesh == null or tfs.is_empty():
+			continue
+		
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.mesh = box
+		mm.mesh = mesh
 		mm.instance_count = tfs.size()
-		for i in tfs.size():
+		for i in range(tfs.size()):
 			mm.set_instance_transform(i, tfs[i])
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		gd.node.add_child(mmi)
+
+
+func _get_render_mesh(bname: String) -> Mesh:
+	if _render_mesh_cache.has(bname):
+		return _render_mesh_cache[bname] as Mesh
+	
+	var block_def := BlockCatalog.get_definition(bname)
+	var mesh := block_def.get("custom_mesh", null) as Mesh
+	if mesh != null:
+		mesh = mesh.duplicate(true)
+	else:
+		var box := BoxMesh.new()
+		box.size = Vector3.ONE * (BLOCK_SIZE * 0.97)
+		mesh = box
+	
+	var material := _build_block_material(block_def, _get_color(bname))
+	_apply_material_to_mesh(mesh, material)
+	_render_mesh_cache[bname] = mesh
+	return mesh
+
+
+func _build_block_material(block_def: Dictionary, base_color: Color) -> Material:
+	var mat := StandardMaterial3D.new()
+	var albedo := block_def.get("fallback_color", base_color) as Color
+	mat.albedo_color = albedo
+	mat.roughness = 0.75
+	mat.metallic = 0.05
+	
+	var tex := block_def.get("albedo_texture", null) as Texture2D
+	if tex != null:
+		mat.albedo_texture = tex
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	
+	if albedo.a < 1.0:
+		mat.transparency = StandardMaterial3D.TRANSPARENCY_ALPHA
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	
+	return mat
+
+
+func _apply_material_to_mesh(mesh: Mesh, material: Material) -> void:
+	if mesh is PrimitiveMesh:
+		(mesh as PrimitiveMesh).material = material
+		return
+	
+	for surface in range(mesh.get_surface_count()):
+		mesh.surface_set_material(surface, material)
 
 
 func _emit_changed() -> void:

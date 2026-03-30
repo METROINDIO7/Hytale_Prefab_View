@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="WoodLightwoodBeam" instance=ExtResource("1_base")]
+block_id = "Wood_Lightwood_Beam"
+display_name = "Wood Lightwood Beam"
+category = "Beams"
+search_tags = PackedStringArray("wood", "lightwood", "beam")
+fallback_color = Color(0.72, 0.62, 0.50, 1)

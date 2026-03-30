@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="MetalBronze" instance=ExtResource("1_base")]
+block_id = "Metal_Bronze"
+display_name = "Metal Bronze"
+category = "Metal"
+search_tags = PackedStringArray("metal", "bronze")
+fallback_color = Color(0.80, 0.60, 0.35, 1)

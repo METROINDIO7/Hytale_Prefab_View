@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="BrickRed" instance=ExtResource("1_base")]
+block_id = "Brick_Red"
+display_name = "Brick Red"
+category = "Special"
+search_tags = PackedStringArray("brick", "red")
+fallback_color = Color(0.72, 0.38, 0.28, 1)

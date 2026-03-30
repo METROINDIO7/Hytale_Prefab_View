@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[sub_resource type="BoxMesh" id="1_glass_mesh"]
+size = Vector3(0.97, 0.97, 0.97)
+
+[node name="GlassClear" instance=ExtResource("1_base")]
+block_id = "Glass_Clear"
+display_name = "Clear Glass"
+category = "Glass"
+search_tags = PackedStringArray("glass", "window", "clear", "transparent")
+custom_mesh = SubResource("1_glass_mesh")
+fallback_color = Color(0.82, 0.92, 1, 0.45)

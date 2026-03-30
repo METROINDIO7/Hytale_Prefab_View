@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="LeafPalm" instance=ExtResource("1_base")]
+block_id = "Leaf_Palm"
+display_name = "Leaf Palm"
+category = "Leaves"
+search_tags = PackedStringArray("leaf", "palm")
+fallback_color = Color(0.30, 0.58, 0.25, 0.85)

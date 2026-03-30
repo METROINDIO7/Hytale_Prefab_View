@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="Fabric" instance=ExtResource("1_base")]
+block_id = "Fabric"
+display_name = "Fabric"
+category = "Special"
+search_tags = PackedStringArray("fabric")
+fallback_color = Color(0.80, 0.50, 0.60, 1)

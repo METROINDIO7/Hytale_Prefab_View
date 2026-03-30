@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="RubbleShale" instance=ExtResource("1_base")]
+block_id = "Rubble_Shale"
+display_name = "Rubble Shale"
+category = "Rubble"
+search_tags = PackedStringArray("rubble", "shale")
+fallback_color = Color(0.52, 0.48, 0.45, 1)

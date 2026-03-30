@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="SoilDirt" instance=ExtResource("1_base")]
+block_id = "Soil_Dirt"
+display_name = "Soil Dirt"
+category = "Dirt"
+search_tags = PackedStringArray("soil", "dirt")
+fallback_color = Color(0.52, 0.36, 0.20, 1)

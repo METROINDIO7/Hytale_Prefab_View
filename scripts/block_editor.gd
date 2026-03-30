@@ -35,6 +35,7 @@ var _sub_vp      : SubViewport
 
 # ── Internal state ────────────────────────────────────────────────────────────
 var _is_pressing : bool       = false
+var _stroke_changed : bool    = false
 var _last_painted: Vector3i   = Vector3i(999999, 999999, 999999)
 
 # Selection
@@ -122,7 +123,7 @@ func handle_hover(mouse_local: Vector2) -> void:
 func handle_press(mouse_local: Vector2) -> void:
 	match current_tool:
 		Tool.PAINT, Tool.ERASE:
-			_is_pressing  = true
+			_begin_stroke()
 			_last_painted = Vector3i(999999, 999999, 999999)
 			var gpos := _ray_to_grid(mouse_local)
 			_apply_brush(gpos)
@@ -134,7 +135,8 @@ func handle_press(mouse_local: Vector2) -> void:
 
 
 func handle_release() -> void:
-	_is_pressing = false
+	if current_tool in [Tool.PAINT, Tool.ERASE] and (_is_pressing or _stroke_changed):
+		_finish_stroke()
 	if current_tool == Tool.SHAPE_SELECT and _sel_drag:
 		_sel_drag   = false
 		_sel_active = true
@@ -142,7 +144,8 @@ func handle_release() -> void:
 
 
 func handle_exit() -> void:
-	_is_pressing = false
+	if current_tool in [Tool.PAINT, Tool.ERASE] and (_is_pressing or _stroke_changed):
+		_finish_stroke()
 	_sel_drag    = false
 	_hover_preview.visible = false
 
@@ -173,14 +176,17 @@ func apply_selection() -> void:
 	if not _sel_active:
 		return
 	var positions := _get_selection_positions()
+	var changed := false
+	_renderer.begin_bulk_edit()
 	for pos in positions:
 		match current_tool:
 			Tool.PAINT, Tool.SHAPE_SELECT:
-				_renderer.add_block(pos, current_block, active_group)
+				changed = _renderer.add_block(pos, current_block, active_group) or changed
 			Tool.ERASE:
-				_renderer.remove_block(pos)
-	_renderer.rebuild_all()
-	action_performed.emit()
+				changed = _renderer.remove_block(pos) or changed
+	_renderer.end_bulk_edit()
+	if changed:
+		action_performed.emit()
 	clear_selection()
 
 
@@ -192,21 +198,32 @@ func clear_selection() -> void:
 
 # ── Internal brush/apply ──────────────────────────────────────────────────────
 
+func _begin_stroke() -> void:
+	_is_pressing = true
+	_stroke_changed = false
+	_renderer.begin_bulk_edit()
+
+
+func _finish_stroke() -> void:
+	var had_changes := _stroke_changed
+	_is_pressing = false
+	_stroke_changed = false
+	_renderer.end_bulk_edit()
+	if had_changes:
+		action_performed.emit()
+
+
 func _apply_brush(center: Vector3i) -> void:
 	var positions := _get_brush_positions(center)
 	var changed := false
 	for pos in positions:
 		match current_tool:
 			Tool.PAINT:
-				_renderer.add_block(pos, current_block, active_group)
-				changed = true
+				changed = _renderer.add_block(pos, current_block, active_group) or changed
 			Tool.ERASE:
-				if _renderer.has_block(pos):
-					_renderer.remove_block(pos)
-					changed = true
+				changed = _renderer.remove_block(pos) or changed
 	if changed:
-		_renderer.rebuild_all()
-		action_performed.emit()
+		_stroke_changed = true
 
 
 func _get_brush_positions(center: Vector3i) -> Array:

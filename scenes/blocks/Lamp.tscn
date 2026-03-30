@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="Lamp" instance=ExtResource("1_base")]
+block_id = "Lamp"
+display_name = "Lamp"
+category = "Special"
+search_tags = PackedStringArray("lamp")
+fallback_color = Color(0.95, 0.88, 0.50, 1)
