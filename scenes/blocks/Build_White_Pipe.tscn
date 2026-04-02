@@ -1,0 +1,76 @@
+[gd_scene format=3 uid="uid://614d0b7624d8d0"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Build_White_Pipe.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Dev_White_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(0.5, 1, 0.5)
+[sub_resource type="CubeMesh" id="Mesh_9d41884a"]
+size = Vector3(0.5, 1, 0.5)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_muxpk"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.5824, 0.523, 0.63909996, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lfiwr"]
+bg_color = Color(0.402, 0.3525, 0.44924998, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.6984, 0.6555, 0.73934996, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_n3ouk"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.652, 0.60249996, 0.69925, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="BoxMesh" id="BoxMesh_sy07k"]
+size = Vector3(0.5, 1, 0.5)
+
+[node name="BuildWhitePipe" unique_id=714789886 instance=ExtResource("1_base")]
+tooltip_text = "Build White Pipe
+ID: Build_White_Pipe
+Category: Build"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_muxpk")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_lfiwr")
+theme_override_styles/hover = SubResource("StyleBoxFlat_n3ouk")
+text = "Build White Pipe"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Build_White_Pipe"
+display_name = "Build White Pipe"
+category = "Build"
+search_tags = PackedStringArray("build", "white", "pipe")
+block_icon = ExtResource("2_icon")
+custom_mesh = SubResource("CustomMesh")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.536, 0.47, 0.599, 1)
+
+custom_mesh = SubResource("Mesh_9d41884a")

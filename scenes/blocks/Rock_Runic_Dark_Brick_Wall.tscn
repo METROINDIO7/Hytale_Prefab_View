@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 1, 1)
+[sub_resource type="CubeMesh" id="Mesh_083e3ee2"]
+size = Vector3(1, 1, 1)
+
+[node name="RockRunicDarkBrickWall" instance=ExtResource("1_base")]
+block_id = "Rock_Runic_Dark_Brick_Wall"
+display_name = "Rock Runic Dark Brick Wall"
+category = "Rock"
+search_tags = PackedStringArray("rock", "runic", "dark", "brick", "wall")
+fallback_color = Color(0.775, 0.801, 0.760, 1)
+
+custom_mesh = SubResource("CustomMesh")

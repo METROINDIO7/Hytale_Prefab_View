@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Rock_Iridescent_Processed_Brick_Half.png" id="2_icon"]
+
+[node name="RockIridescentProcessedBrickHalf" instance=ExtResource("1_base")]
+block_id = "Rock_Iridescent_Processed_Brick_Half"
+display_name = "Rock Iridescent Processed Brick Half"
+category = "Rock"
+search_tags = PackedStringArray("rock", "iridescent", "processed", "brick", "half")
+fallback_color = Color(0.783, 0.366, 0.444, 1)
+block_icon = ExtResource("2_icon")

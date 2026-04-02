@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Metal_Bronze_Pipe_Large_Mouthpiece.png" id="2_icon"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(0.5, 1, 0.5)
+[sub_resource type="CubeMesh" id="Mesh_2455b180"]
+size = Vector3(0.5, 1, 0.5)
+
+[node name="MetalBronzePipeLargeMouthpiece" instance=ExtResource("1_base")]
+block_id = "Metal_Bronze_Pipe_Large_Mouthpiece"
+display_name = "Metal Bronze Pipe Large Mouthpiece"
+category = "Metal"
+search_tags = PackedStringArray("metal", "bronze", "pipe", "large", "mouthpiece")
+fallback_color = Color(0.800, 0.600, 0.350, 1)
+block_icon = ExtResource("2_icon")
+
+custom_mesh = SubResource("CustomMesh")

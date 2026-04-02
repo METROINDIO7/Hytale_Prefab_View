@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Rock_Lime_Brick_Roof_Hollow.png" id="2_icon"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_4474a83b"]
+size = Vector3(1, 0.5, 1)
+
+[node name="RockLimeBrickRoofHollow" instance=ExtResource("1_base")]
+block_id = "Rock_Lime_Brick_Roof_Hollow"
+display_name = "Rock Lime Brick Roof Hollow"
+category = "Rock"
+search_tags = PackedStringArray("rock", "lime", "brick", "roof", "hollow")
+fallback_color = Color(0.501, 0.425, 0.440, 1)
+block_icon = ExtResource("2_icon")
+
+custom_mesh = SubResource("CustomMesh")

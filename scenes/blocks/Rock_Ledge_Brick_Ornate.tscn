@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="RockLedgeBrickOrnate" instance=ExtResource("1_base")]
+block_id = "Rock_Ledge_Brick_Ornate"
+display_name = "Rock Ledge Brick Ornate"
+category = "Rock"
+search_tags = PackedStringArray("rock", "ledge", "brick", "ornate")
+fallback_color = Color(0.666, 0.379, 0.495, 1)

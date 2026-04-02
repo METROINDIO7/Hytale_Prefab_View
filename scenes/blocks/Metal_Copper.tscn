@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Metal_Copper.png" id="2_icon"]
 
 [node name="MetalCopper" instance=ExtResource("1_base")]
 block_id = "Metal_Copper"
@@ -8,3 +9,4 @@ display_name = "Metal Copper"
 category = "Metal"
 search_tags = PackedStringArray("metal", "copper")
 fallback_color = Color(0.78, 0.52, 0.32, 1)
+block_icon = ExtResource("2_icon")

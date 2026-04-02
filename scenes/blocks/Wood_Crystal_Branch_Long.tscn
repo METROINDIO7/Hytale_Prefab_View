@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Wood_Crystal_Branch_Long.png" id="2_icon"]
+
+[node name="WoodCrystalBranchLong" instance=ExtResource("1_base")]
+block_id = "Wood_Crystal_Branch_Long"
+display_name = "Wood Crystal Branch Long"
+category = "Wood"
+search_tags = PackedStringArray("wood", "crystal", "branch", "long")
+fallback_color = Color(0.850, 0.750, 0.950, 1)
+block_icon = ExtResource("2_icon")

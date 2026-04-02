@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Rock_Crystal_Blue.png" id="3_tex"]
+
+[node name="RockCrystalBlueBlock" instance=ExtResource("1_base")]
+block_id = "Rock_Crystal_Blue_Block"
+display_name = "Rock Crystal Blue Block"
+category = "Rock"
+search_tags = PackedStringArray("rock", "crystal", "blue", "block")
+fallback_color = Color(0.850, 0.750, 0.950, 1)
+
+albedo_texture = ExtResource("3_tex")

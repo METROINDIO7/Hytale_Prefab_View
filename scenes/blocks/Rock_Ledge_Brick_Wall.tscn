@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 1, 1)
+[sub_resource type="CubeMesh" id="Mesh_f359f88f"]
+size = Vector3(1, 1, 1)
+
+[node name="RockLedgeBrickWall" instance=ExtResource("1_base")]
+block_id = "Rock_Ledge_Brick_Wall"
+display_name = "Rock Ledge Brick Wall"
+category = "Rock"
+search_tags = PackedStringArray("rock", "ledge", "brick", "wall")
+fallback_color = Color(0.646, 0.634, 0.797, 1)
+
+custom_mesh = SubResource("CustomMesh")

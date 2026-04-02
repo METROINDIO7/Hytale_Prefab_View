@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Metal_Iron_Roof_Steep.png" id="2_icon"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_cd6c83f9"]
+size = Vector3(1, 0.5, 1)
+
+[node name="MetalIronRoofSteep" instance=ExtResource("1_base")]
+block_id = "Metal_Iron_Roof_Steep"
+display_name = "Metal Iron Roof Steep"
+category = "Metal"
+search_tags = PackedStringArray("metal", "iron", "roof", "steep")
+fallback_color = Color(0.720, 0.740, 0.780, 1)
+block_icon = ExtResource("2_icon")
+
+custom_mesh = SubResource("CustomMesh")

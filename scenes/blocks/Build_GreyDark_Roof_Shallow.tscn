@@ -1,0 +1,77 @@
+[gd_scene format=3 uid="uid://a3030c3c65f3e1"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Build_GreyDark_Roof_Shallow.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Dev_Grey_Dark_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_f76607f4"]
+size = Vector3(1, 0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vfvhg"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8065, 0.6058, 0.83529997, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dhiq6"]
+bg_color = Color(0.58875, 0.42149997, 0.61275, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.86025, 0.71529996, 0.88105, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8c8xm"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.83875, 0.67149997, 0.86275, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="PrismMesh" id="PrismMesh_bsxfl"]
+left_to_right = 0.0
+size = Vector3(2, 1, 1)
+
+[node name="BuildGreyDarkRoofShallow" unique_id=1662176465 instance=ExtResource("1_base")]
+tooltip_text = "Build GreyDark Roof Shallow
+ID: Build_GreyDark_Roof_Shallow
+Category: Build"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_vfvhg")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_dhiq6")
+theme_override_styles/hover = SubResource("StyleBoxFlat_8c8xm")
+text = "Build GreyDark Roof Shallow"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Build_GreyDark_Roof_Shallow"
+display_name = "Build GreyDark Roof Shallow"
+category = "Build"
+search_tags = PackedStringArray("build", "greydark", "roof", "shallow")
+block_icon = ExtResource("2_icon")
+custom_mesh = SubResource("CustomMesh")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.785, 0.562, 0.817, 1)
+
+custom_mesh = SubResource("Mesh_f76607f4")

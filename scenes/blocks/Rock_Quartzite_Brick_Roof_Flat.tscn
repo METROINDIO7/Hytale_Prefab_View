@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Rock_Quartzite_Brick_Roof_Flat.png" id="2_icon"]
+
+[node name="RockQuartziteBrickRoofFlat" instance=ExtResource("1_base")]
+block_id = "Rock_Quartzite_Brick_Roof_Flat"
+display_name = "Rock Quartzite Brick Roof Flat"
+category = "Rock"
+search_tags = PackedStringArray("rock", "quartzite", "brick", "roof", "flat")
+fallback_color = Color(0.950, 0.920, 0.880, 1)
+block_icon = ExtResource("2_icon")

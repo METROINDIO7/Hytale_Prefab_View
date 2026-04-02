@@ -1,0 +1,77 @@
+[gd_scene format=3 uid="uid://9372c10e134dd9"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Build_GreyDark_Roof_Steep.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Dev_Grey_Dark_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_61f829da"]
+size = Vector3(1, 0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tep1t"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8524, 0.4699, 0.55630004, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_swh4b"]
+bg_color = Color(0.62700003, 0.30825, 0.38025004, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8934, 0.61715, 0.67955005, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tgp6y"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.87700003, 0.55825, 0.63025004, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="PrismMesh" id="PrismMesh_wttt0"]
+left_to_right = 0.0
+size = Vector3(1, 2, 1)
+
+[node name="BuildGreyDarkRoofSteep" unique_id=845998327 instance=ExtResource("1_base")]
+tooltip_text = "Build GreyDark Roof Steep
+ID: Build_GreyDark_Roof_Steep
+Category: Build"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_tep1t")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_swh4b")
+theme_override_styles/hover = SubResource("StyleBoxFlat_tgp6y")
+text = "Build GreyDark Roof Steep"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Build_GreyDark_Roof_Steep"
+display_name = "Build GreyDark Roof Steep"
+category = "Build"
+search_tags = PackedStringArray("build", "greydark", "roof", "steep")
+block_icon = ExtResource("2_icon")
+custom_mesh = SubResource("CustomMesh")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.836, 0.411, 0.507, 1)
+
+custom_mesh = SubResource("Mesh_61f829da")

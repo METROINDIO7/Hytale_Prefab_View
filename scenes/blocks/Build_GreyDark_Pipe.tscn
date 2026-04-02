@@ -1,0 +1,76 @@
+[gd_scene format=3 uid="uid://4af9ba57d303ee"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Build_GreyDark_Pipe.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Dev_Grey_Dark_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(0.5, 1, 0.5)
+[sub_resource type="CubeMesh" id="Mesh_2c97fd42"]
+size = Vector3(0.5, 1, 0.5)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3nxue"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.82989997, 0.5293, 0.76240003, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wdy13"]
+bg_color = Color(0.60825, 0.35775, 0.552, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.87715, 0.66005, 0.8284, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mbygt"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.85825, 0.60775, 0.802, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="BoxMesh" id="BoxMesh_rau3p"]
+size = Vector3(0.5, 1, 0.5)
+
+[node name="BuildGreyDarkPipe" unique_id=1535235217 instance=ExtResource("1_base")]
+tooltip_text = "Build GreyDark Pipe
+ID: Build_GreyDark_Pipe
+Category: Build"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_3nxue")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_wdy13")
+theme_override_styles/hover = SubResource("StyleBoxFlat_mbygt")
+text = "Build GreyDark Pipe"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Build_GreyDark_Pipe"
+display_name = "Build GreyDark Pipe"
+category = "Build"
+search_tags = PackedStringArray("build", "greydark", "pipe")
+block_icon = ExtResource("2_icon")
+custom_mesh = SubResource("CustomMesh")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.811, 0.477, 0.736, 1)
+
+custom_mesh = SubResource("Mesh_2c97fd42")

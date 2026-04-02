@@ -1,0 +1,77 @@
+[gd_scene format=3 uid="uid://e2f714cdc31098"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Build_Black_Roof_Steep.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Dev_Black_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_cfc2ae8e"]
+size = Vector3(1, 0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_36423"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.71110004, 0.79749995, 0.847, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_87ck7"]
+bg_color = Color(0.50925004, 0.58124995, 0.6225, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.79135, 0.85375, 0.88949996, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jcoa4"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.75925004, 0.83124995, 0.8725, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="PrismMesh" id="PrismMesh_dpr4y"]
+left_to_right = 0.0
+size = Vector3(1, 2, 1)
+
+[node name="BuildBlackRoofSteep" unique_id=2030091606 instance=ExtResource("1_base")]
+tooltip_text = "Build Black Roof Steep
+ID: Build_Black_Roof_Steep
+Category: Build"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_36423")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_87ck7")
+theme_override_styles/hover = SubResource("StyleBoxFlat_jcoa4")
+text = "Build Black Roof Steep"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Build_Black_Roof_Steep"
+display_name = "Build Black Roof Steep"
+category = "Build"
+search_tags = PackedStringArray("build", "black", "roof", "steep")
+block_icon = ExtResource("2_icon")
+custom_mesh = SubResource("CustomMesh")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.679, 0.775, 0.83, 1)
+
+custom_mesh = SubResource("Mesh_cfc2ae8e")

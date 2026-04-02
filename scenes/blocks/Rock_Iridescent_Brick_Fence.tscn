@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Rock_Iridescent_Brick_Fence.png" id="2_icon"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(0.1, 1, 1)
+[sub_resource type="CubeMesh" id="Mesh_9c35fcb7"]
+size = Vector3(0.1, 1, 1)
+
+[node name="RockIridescentBrickFence" instance=ExtResource("1_base")]
+block_id = "Rock_Iridescent_Brick_Fence"
+display_name = "Rock Iridescent Brick Fence"
+category = "Rock"
+search_tags = PackedStringArray("rock", "iridescent", "brick", "fence")
+fallback_color = Color(0.474, 0.746, 0.689, 1)
+block_icon = ExtResource("2_icon")
+
+custom_mesh = SubResource("CustomMesh")

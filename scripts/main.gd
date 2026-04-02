@@ -19,6 +19,7 @@ extends Control
 @onready var _btn_erase     : Button   = %BtnErase
 @onready var _btn_select    : Button   = %BtnSelect
 @onready var _block_input   : LineEdit = %BlockNameEdit
+@onready var _btn_copy_block: Button   = %BtnDuplicateBlock
 @onready var _brush_btn1    : Button   = %BrushBtn1
 @onready var _brush_btn3    : Button   = %BrushBtn3
 @onready var _brush_btn5    : Button   = %BrushBtn5
@@ -66,12 +67,16 @@ extends Control
 
 @onready var _status_lbl    : Label         = %StatusLabel
 
+
+
 # ═══ File dialogs ══════════════════════════════════════════════════════════════
 var _dlg_import  : FileDialog
 var _dlg_export  : FileDialog
 var _dlg_save    : FileDialog
 var _dlg_open    : FileDialog
 var _dlg_img     : FileDialog
+
+
 
 # ═══ Runtime state ═════════════════════════════════════════════════════════════
 var _cam_counter  : int    = 0
@@ -82,167 +87,16 @@ var _grid_mesh    : MeshInstance3D
 
 const BLOCK_BUTTON_SCENE := preload("res://scenes/block_palette_button.tscn")
 
-# ═══ BLOCK PALETTE (Organized by category - 1x1 blocks only) ═══════════════════
-const BLOCK_PALETTE : Dictionary = {
-	# ── ROCK FAMILY ────────────────────────────────────────────────────────────
-	"Rock": [
-		"Rock_Volcanic_Brick", "Rock_Volcanic_Cobble",
-		"Rock_Limestone_Brick", "Rock_Limestone_Cobble",
-		"Rock_Granite_Brick", "Rock_Granite_Cobble",
-		"Rock_Marble_Brick", "Rock_Marble_Cobble",
-		"Rock_Sandstone_Brick", "Rock_Sandstone_Cobble",
-		"Rock_Slate_Brick", "Rock_Slate_Cobble",
-		"Rock_Shale_Brick", "Rock_Shale_Cobble",
-		"Rock_Quartzite_Brick", "Rock_Calcite_Brick",
-		"Rock_Chalk_Brick", "Rock_Basalt_Brick",
-		"Rock_Dawnstone_Brick", "Rock_Stone_Brick",
-		"Rock_Stone_Cobble", "Rock_Rough", "Rock_Polished", "Rock_Smooth",
-	],
-	
-	# ── RUBBLE ─────────────────────────────────────────────────────────────────
-	"Rubble": [
-		"Rubble_Stone", "Rubble_Volcanic", "Rubble_Sandstone",
-		"Rubble_Marble", "Rubble_Granite", "Rubble_Limestone",
-		"Rubble_Basalt", "Rubble_Quartzite", "Rubble_Calcite",
-		"Rubble_Chalk", "Rubble_Shale", "Rubble_Slate",
-		"Rubble_Dawnstone", "Rubble_Ice", "Rubble_Magma_Cooled",
-		"Rubble_Aqua", "Rubble_Lime",
-	],
-	
-	# ── DIRT & GRASS ───────────────────────────────────────────────────────────
-	"Dirt": [
-		"Soil_Dirt", "Soil_Dirt_Cold", "Soil_Dirt_Dry", "Soil_Dirt_Wet",
-		"Soil_Dirt_Lush", "Soil_Dirt_Burnt", "Soil_Dirt_Poisoned",
-		"Soil_Dirt_Crystal", "Soil_Dirt_Tilled",
-		"Soil_Grass", "Soil_Grass_Cold", "Soil_Grass_Dry",
-		"Soil_Grass_Wet", "Soil_Grass_Burnt", "Soil_Grass_Sunny",
-		"Soil_Grass_Deep", "Soil_Grass_Full",
-	],
-	
-	# ── SAND & GRAVEL ──────────────────────────────────────────────────────────
-	"Sand": [
-		"Soil_Sand", "Soil_Sand_Red", "Soil_Sand_White", "Soil_Sand_Ashen",
-		"Soil_Gravel", "Soil_Gravel_Mossy", "Soil_Gravel_Sand",
-		"Soil_Gravel_Sand_Red", "Soil_Gravel_Sand_White",
-		"Soil_Aqua_Gravel", "Soil_Basalt_Gravel", "Soil_Calcite_Gravel",
-		"Soil_Chalk_Gravel", "Soil_Lime_Gravel", "Soil_Magma_Cooled_Gravel",
-		"Soil_Marble_Gravel", "Soil_Quartzite_Gravel", "Soil_Shale_Gravel",
-		"Soil_Slate_Gravel", "Soil_Volcanic_Gravel",
-		"Soil_Pebbles", "Soil_Pebbles_Frozen",
-	],
-	
-	# ── CLAY ───────────────────────────────────────────────────────────────────
-	"Clay": [
-		"Soil_Clay", "Soil_Clay_Brick", "Soil_Clay_Raw_Brick", "Soil_Clay_Smooth",
-		"Soil_Clay_Ocean", "Soil_Clay_Ocean_Brick", "Soil_Clay_Ocean_Brick_Smooth",
-		"Soil_Clay_Beige", "Soil_Clay_Black", "Soil_Clay_Blue",
-		"Soil_Clay_Cyan", "Soil_Clay_Green", "Soil_Clay_Grey",
-		"Soil_Clay_Lime", "Soil_Clay_Orange", "Soil_Clay_Pink",
-		"Soil_Clay_Purple", "Soil_Clay_Red", "Soil_Clay_White", "Soil_Clay_Yellow",
-	],
-	
-	# ── SNOW & SPECIAL ─────────────────────────────────────────────────────────
-	"Snow": [
-		"Soil_Snow", "Soil_Snow_Brick", "Soil_Ash", "Soil_Mud", "Soil_Mud_Dry",
-		"Soil_Hive", "Soil_Hive_Brick", "Soil_Hive_Corrupted",
-		"Soil_Hive_Corrupted_Brick", "Soil_Leaves", "Soil_Needles",
-		"Soil_Roots_Poisoned", "Soil_Seaweed_Block", "Soil_Pathway",
-	],
-	
-	# ── WOOD PLANKS ────────────────────────────────────────────────────────────
-	"Planks": [
-		"Wood_Oak_Planks", "Wood_Birch_Planks", "Wood_Pine_Planks",
-		"Wood_Darkwood_Planks", "Wood_Redwood_Planks", "Wood_Goldenwood_Planks",
-		"Wood_Greenwood_Planks", "Wood_Hardwood_Planks", "Wood_Lightwood_Planks",
-		"Wood_Softwood_Planks", "Wood_Tropicalwood_Planks", "Wood_Drywood_Planks",
-		"Wood_Blackwood_Planks", "Wood_Deadwood_Planks", "Wood_Amber_Planks",
-		"Wood_Ash_Planks", "Wood_Aspen_Planks", "Wood_Azure_Planks",
-		"Wood_Bamboo_Planks", "Wood_Banyan_Planks", "Wood_Beech_Planks",
-		"Wood_Bottletree_Planks", "Wood_Burnt_Planks", "Wood_Camphor_Planks",
-		"Wood_Cedar_Planks", "Wood_Crystal_Planks", "Wood_Fig_Blue_Planks",
-		"Wood_Fir_Planks", "Wood_Fire_Planks", "Wood_Gumboab_Planks",
-		"Wood_Ice_Planks", "Wood_Jungle_Planks", "Wood_Maple_Planks",
-		"Wood_Palm_Planks", "Wood_Palo_Planks", "Wood_Petrified_Planks",
-		"Wood_Poisoned_Planks", "Wood_Sallow_Planks", "Wood_Spiral_Planks",
-		"Wood_Stormbark_Planks", "Wood_Windwillow_Planks", "Wood_Wisteria_Wild_Planks",
-	],
-	
-	# ── WOOD BEAMS ─────────────────────────────────────────────────────────────
-	"Beams": [
-		"Wood_Oak_Beam", "Wood_Birch_Beam", "Wood_Pine_Beam",
-		"Wood_Darkwood_Beam", "Wood_Redwood_Beam", "Wood_Goldenwood_Beam",
-		"Wood_Greenwood_Beam", "Wood_Hardwood_Beam", "Wood_Lightwood_Beam",
-		"Wood_Softwood_Beam", "Wood_Tropicalwood_Beam", "Wood_Drywood_Beam",
-		"Wood_Blackwood_Beam", "Wood_Deadwood_Beam",
-	],
-	
-	# ── WOOD DECORATIVE ────────────────────────────────────────────────────────
-	"Wood Dec": [
-		"Wood_Oak_Decorative", "Wood_Darkwood_Decorative", "Wood_Redwood_Decorative",
-		"Wood_Goldenwood_Decorative", "Wood_Greenwood_Decorative",
-		"Wood_Hardwood_Decorative", "Wood_Lightwood_Decorative",
-		"Wood_Softwood_Decorative", "Wood_Tropicalwood_Decorative",
-		"Wood_Drywood_Decorative", "Wood_Blackwood_Decorative",
-		"Wood_Deadwood_Decorative",
-	],
-	
-	# ── WOOD ORNATE ────────────────────────────────────────────────────────────
-	"Wood Orn": [
-		"Wood_Oak_Ornate", "Wood_Darkwood_Ornate", "Wood_Redwood_Ornate",
-		"Wood_Goldenwood_Ornate", "Wood_Greenwood_Ornate",
-		"Wood_Hardwood_Ornate", "Wood_Lightwood_Ornate",
-		"Wood_Softwood_Ornate", "Wood_Tropicalwood_Ornate",
-		"Wood_Drywood_Ornate", "Wood_Blackwood_Ornate", "Wood_Deadwood_Ornate",
-	],
-	
-	# ── GLASS ──────────────────────────────────────────────────────────────────
-	"Glass": [
-		"Glass_Clear", "Glass_Stained", "Glass_Blue", "Glass_Red",
-		"Glass_Green", "Glass_Yellow", "Glass_Purple", "Glass_Orange",
-	],
-	
-	# ── METAL & ORE ────────────────────────────────────────────────────────────
-	"Metal": [
-		"Metal_Iron", "Metal_Gold", "Metal_Copper", "Metal_Bronze",
-		"Metal_Silver", "Metal_Steel", "Metal_Cobalt", "Metal_Mithril",
-		"Metal_Adamantite", "Metal_Onyxium", "Metal_Thorium", "Metal_Scrap",
-		"Ore_Iron", "Ore_Gold", "Ore_Copper", "Ore_Cobalt",
-		"Ore_Mithril", "Ore_Adamantite", "Ore_Onyxium", "Ore_Thorium",
-	],
-	
-	# ── LEAVES ─────────────────────────────────────────────────────────────────
-	"Leaves": [
-		"Leaf_Oak", "Leaf_Birch", "Leaf_Pine", "Leaf_Fir", "Leaf_Maple",
-		"Leaf_Jungle", "Leaf_Palm", "Leaf_Azure", "Leaf_Crystal",
-		"Leaf_Ice", "Leaf_Fire", "Leaf_Poisoned", "Leaf_Burnt", "Leaf_Dry",
-		"Foliage", "Flower", "Plant", "Vine", "Crop", "Hay", "Straw",
-	],
-	
-	# ── SPECIAL & DECORATIVE ───────────────────────────────────────────────────
-	"Special": [
-		"Water", "Lava", "Fire", "Ice_Solid", "Frost", "Crystal", "Gem",
-		"Lamp", "Lantern", "Torch", "Light", "Glow",
-		"Chest", "Barrel", "Crate", "Bookshelf",
-		"Fabric", "Cloth", "Carpet", "Wool",
-		"Concrete", "Tile", "Ceramic", "Terracotta", "Adobe",
-		"Brick_Red", "Brick_Dark", "Tile_Mosaic",
-	],
-	
-	# ── VILLAGE WALLS ──────────────────────────────────────────────────────────
-	"Village": [
-		"Wood_Village_Wall", "Wood_Village_Wall_Ocean",
-		"Wood_Village_Wall_Black", "Wood_Village_Wall_Blue",
-		"Wood_Village_Wall_Cyan", "Wood_Village_Wall_Green",
-		"Wood_Village_Wall_Grey", "Wood_Village_Wall_GreyDark",
-		"Wood_Village_Wall_Lime", "Wood_Village_Wall_Orange",
-		"Wood_Village_Wall_Pink", "Wood_Village_Wall_Purple",
-		"Wood_Village_Wall_Red", "Wood_Village_Wall_RedDark",
-		"Wood_Village_Wall_White", "Wood_Village_Wall_Yellow",
-	],
-}
+# ═══ BLOCK PALETTE ═══════════════════════════════════════════════════════════
+# La paleta real ahora se carga desde `res://data/generated_block_palette.json`.
+# Este diccionario queda vacío como fallback legacy.
+const BLOCK_PALETTE : Dictionary = {}
 
 # Store all palette buttons for search filtering
 var _palette_buttons : Array = []
+
+# Copy block mode
+var _copy_block_mode : bool = false
 
 
 # ── UNDO/REDO SYSTEM ──────────────────────────────────────────────────────────
@@ -269,6 +123,9 @@ var _sel_border_spin : SpinBox = null
 
 # ═════════════════════════════════════════════════════════════════════════════
 func _ready() -> void:
+	# Force include resources
+
+	
 	_build_3d_scene()
 	_build_palette()
 	_build_menus()
@@ -551,7 +408,6 @@ func _on_img_selected(path: String) -> void:
 		_status("⚠ Select a ref camera before loading an image."); return
 	var ok := _ref_mgr.load_image_for(_sel_entry, path)
 	if ok:
-		_status("🖼 Image loaded for '%s'." % _sel_entry.cam_name)
 		if _cam_ctrl.get_active_camera() == _sel_entry.camera:
 			_ref_mgr.show_for_camera(_sel_entry.camera)
 	else:
@@ -958,6 +814,7 @@ func _connect_signals() -> void:
 
 	# Block name
 	_block_input.text_changed.connect(func(t): _editor.set_block_name(t))
+	_btn_copy_block.pressed.connect(_on_copy_block)
 
 	# Brush sizes
 	_brush_btn1.pressed.connect(func(): _set_brush(1))
@@ -1231,6 +1088,27 @@ func _on_vp_input(event: InputEvent) -> void:
 	var mouse_vp := Vector2.ZERO
 	if ct_size.x > 0.0 and ct_size.y > 0.0 and event is InputEventMouse:
 		mouse_vp = (event as InputEventMouse).position / ct_size * vp_size
+
+	# Handle copy block mode
+	if _copy_block_mode and event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			# Get the grid position where user clicked
+			var gpos := _editor._ray_to_grid(mb.position)
+			# Get the block at that position
+			var block_name := _renderer.get_block_at(gpos)
+			if block_name.is_empty():
+				_status("❌ No block at that position")
+			else:
+				# Copy the block name to the input field
+				_block_input.text = block_name
+				_editor.set_block_name(block_name)
+				_status("✅ Block copied: '%s'" % block_name)
+			# Exit copy block mode
+			_copy_block_mode = false
+			_btn_copy_block.button_pressed = false
+			get_viewport().set_input_as_handled()
+			return
 
 	match _active_tool:
 		BlockEditor.Tool.SELECT:
@@ -1793,7 +1671,6 @@ func _toggle_bottom() -> void:
 
 func _status(msg: String) -> void:
 	if _status_lbl: _status_lbl.text = "  " + msg
-	print("[HPV] " + msg)
 
 
 
@@ -1856,6 +1733,24 @@ func _update_occlusion_culling() -> void:
 		# Todo visible
 		for gn in _renderer.get_group_names():
 			_renderer.set_group_visible(gn, true)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# BLOCK COPY/DUPLICATE
+# ═════════════════════════════════════════════════════════════════════════════
+
+func _on_copy_block() -> void:
+	if _copy_block_mode:
+		# Cancel copy mode
+		_copy_block_mode = false
+		_btn_copy_block.button_pressed = false
+		_status("Copy block mode cancelled")
+	else:
+		# Enter copy block mode
+		_copy_block_mode = true
+		_btn_copy_block.button_pressed = true
+		_status("📋 Copy block mode: Click on a block in the scene to copy it")
+
 
 
 @warning_ignore("unused_parameter")

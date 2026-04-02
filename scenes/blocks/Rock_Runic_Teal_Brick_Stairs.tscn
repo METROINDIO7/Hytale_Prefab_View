@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Runic_Brick_DarkBlue.png" id="3_tex"]
+
+[node name="RockRunicTealBrickStairs" instance=ExtResource("1_base")]
+block_id = "Rock_Runic_Teal_Brick_Stairs"
+display_name = "Rock Runic Teal Brick Stairs"
+category = "Rock"
+search_tags = PackedStringArray("rock", "runic", "teal", "brick", "stairs")
+fallback_color = Color(0.648, 0.409, 0.487, 1)
+albedo_texture = ExtResource("3_tex")

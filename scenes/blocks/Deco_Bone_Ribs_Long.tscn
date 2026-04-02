@@ -1,0 +1,76 @@
+[gd_scene format=3 uid="uid://2d6d5315167a84"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Bone_Ribs_Long.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Bone_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 1, 1)
+[sub_resource type="CubeMesh" id="Mesh_c7eef324"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btp6i"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.514, 0.7129, 0.4483, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_r5j7q"]
+bg_color = Color(0.345, 0.51075, 0.29025, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.649, 0.79265, 0.60155, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qvd3f"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.595, 0.76075, 0.54025, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="BoxMesh" id="BoxMesh_xu7b0"]
+size = Vector3(0.5, 1, 0.5)
+
+[node name="DecoBoneRibsLong" unique_id=1531484686 instance=ExtResource("1_base")]
+tooltip_text = "Deco Bone Ribs Long
+ID: Deco_Bone_Ribs_Long
+Category: Bone"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_btp6i")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r5j7q")
+theme_override_styles/hover = SubResource("StyleBoxFlat_qvd3f")
+text = "Deco Bone Ribs Long"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Deco_Bone_Ribs_Long"
+display_name = "Deco Bone Ribs Long"
+category = "Bone"
+search_tags = PackedStringArray("bone", "deco", "ribs", "long")
+block_icon = ExtResource("2_icon")
+custom_mesh = SubResource("CustomMesh")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.46, 0.681, 0.387, 1)
+
+custom_mesh = SubResource("Mesh_c7eef324")

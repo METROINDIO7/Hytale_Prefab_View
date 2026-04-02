@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(0.5, 1, 0.5)
+[sub_resource type="CubeMesh" id="Mesh_89993a57"]
+size = Vector3(0.5, 1, 0.5)
+
+[node name="RockRunicBlueBrickPipeShort" instance=ExtResource("1_base")]
+block_id = "Rock_Runic_Blue_Brick_Pipe_Short"
+display_name = "Rock Runic Blue Brick Pipe Short"
+category = "Rock"
+search_tags = PackedStringArray("rock", "runic", "blue", "brick", "pipe", "short")
+fallback_color = Color(0.774, 0.675, 0.536, 1)
+
+custom_mesh = SubResource("CustomMesh")

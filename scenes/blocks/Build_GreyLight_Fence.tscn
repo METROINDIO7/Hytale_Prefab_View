@@ -1,0 +1,76 @@
+[gd_scene format=3 uid="uid://3882409bf85a2e"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Build_GreyLight_Fence.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Dev_Grey_Light_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(0.1, 1, 1)
+[sub_resource type="CubeMesh" id="Mesh_b8087dfe"]
+size = Vector3(0.1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2rgv8"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.982, 0.955, 0.865, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x2ux0"]
+bg_color = Color(0.735, 0.7125, 0.63750005, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.987, 0.9675, 0.90250003, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qci06"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.985, 0.9625, 0.88750005, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="BoxMesh" id="BoxMesh_45r2k"]
+size = Vector3(1, 1, 0.5)
+
+[node name="BuildGreyLightFence" unique_id=852729316 instance=ExtResource("1_base")]
+tooltip_text = "Build GreyLight Fence
+ID: Build_GreyLight_Fence
+Category: Build"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_2rgv8")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_x2ux0")
+theme_override_styles/hover = SubResource("StyleBoxFlat_qci06")
+text = "Build GreyLight Fence"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Build_GreyLight_Fence"
+display_name = "Build GreyLight Fence"
+category = "Build"
+search_tags = PackedStringArray("build", "greylight", "fence")
+block_icon = ExtResource("2_icon")
+custom_mesh = SubResource("CustomMesh")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.98, 0.95, 0.85, 1)
+
+custom_mesh = SubResource("Mesh_b8087dfe")

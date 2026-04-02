@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Rock_Aqua_Cobble_Roof_Steep.png" id="2_icon"]
+
+[node name="RockAquaCobbleRoofSteep" instance=ExtResource("1_base")]
+block_id = "Rock_Aqua_Cobble_Roof_Steep"
+display_name = "Rock Aqua Cobble Roof Steep"
+category = "Rock"
+search_tags = PackedStringArray("rock", "aqua", "cobble", "roof", "steep")
+fallback_color = Color(0.756, 0.844, 0.789, 1)
+block_icon = ExtResource("2_icon")

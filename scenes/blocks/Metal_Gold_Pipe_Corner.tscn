@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Metal_Gold_Pipe_Corner.png" id="2_icon"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(0.5, 1, 0.5)
+[sub_resource type="CubeMesh" id="Mesh_8a989af6"]
+size = Vector3(0.5, 1, 0.5)
+
+[node name="MetalGoldPipeCorner" instance=ExtResource("1_base")]
+block_id = "Metal_Gold_Pipe_Corner"
+display_name = "Metal Gold Pipe Corner"
+category = "Metal"
+search_tags = PackedStringArray("metal", "gold", "pipe", "corner")
+fallback_color = Color(0.950, 0.800, 0.200, 1)
+block_icon = ExtResource("2_icon")
+
+custom_mesh = SubResource("CustomMesh")

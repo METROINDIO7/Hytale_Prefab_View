@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Wood_Gumboab_Trunk_Half.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Wood_Trunk_Gumboab_Side.png" id="3_tex"]
+
+[node name="WoodGumboabTrunkHalf" instance=ExtResource("1_base")]
+block_id = "Wood_Gumboab_Trunk_Half"
+display_name = "Wood Gumboab Trunk Half"
+category = "Wood"
+search_tags = PackedStringArray("wood", "gumboab", "trunk", "half")
+fallback_color = Color(0.675, 0.607, 0.372, 1)
+block_icon = ExtResource("2_icon")
+albedo_texture = ExtResource("3_tex")

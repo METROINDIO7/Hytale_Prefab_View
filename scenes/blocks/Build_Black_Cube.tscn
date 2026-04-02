@@ -1,0 +1,66 @@
+[gd_scene format=3 uid="uid://c83b5281ffyvx"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" uid="uid://c4y7btduj8ltk" path="res://2d/Icons/ItemsGenerated/Build_Black_Cube.png" id="2_icon"]
+[ext_resource type="Texture2D" uid="uid://dk4k1og6o1dme" path="res://2d/BlockTextures/Dev_Black_Side.png" id="3_tex"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1krit"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.47709998, 0.6283, 0.6922, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_r5pct"]
+bg_color = Color(0.31425, 0.44025, 0.4935, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.62235, 0.73155, 0.7777, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3nxk6"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.56425, 0.69025004, 0.7435, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="BuildBlackCube" unique_id=1256446991 instance=ExtResource("1_base")]
+tooltip_text = "Build Black Cube
+ID: Build_Black_Cube
+Category: Build"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_1krit")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_r5pct")
+theme_override_styles/hover = SubResource("StyleBoxFlat_3nxk6")
+text = "Build Black Cube"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Build_Black_Cube"
+display_name = "Build Black Cube"
+category = "Build"
+search_tags = PackedStringArray("build", "black", "cube")
+block_icon = ExtResource("2_icon")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.419, 0.587, 0.658, 1)

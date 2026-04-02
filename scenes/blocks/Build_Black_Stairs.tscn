@@ -1,0 +1,77 @@
+[gd_scene format=3 uid="uid://25c96c78cbf994"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Build_Black_Stairs.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Dev_Black_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_7178684c"]
+size = Vector3(1, 0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_62jd4"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.76060003, 0.47349998, 0.6175, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6na0c"]
+bg_color = Color(0.55050004, 0.31125, 0.43124998, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.82710004, 0.61975, 0.72375, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bjm2o"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.80050004, 0.56125, 0.68125, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="PrismMesh" id="PrismMesh_ous1f"]
+left_to_right = 0.0
+size = Vector3(1, 0.7, 1)
+
+[node name="BuildBlackStairs" unique_id=392557660 instance=ExtResource("1_base")]
+tooltip_text = "Build Black Stairs
+ID: Build_Black_Stairs
+Category: Build"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_62jd4")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_6na0c")
+theme_override_styles/hover = SubResource("StyleBoxFlat_bjm2o")
+text = "Build Black Stairs"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Build_Black_Stairs"
+display_name = "Build Black Stairs"
+category = "Build"
+search_tags = PackedStringArray("build", "black", "stairs")
+block_icon = ExtResource("2_icon")
+custom_mesh = SubResource("CustomMesh")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.734, 0.415, 0.575, 1)
+
+custom_mesh = SubResource("Mesh_7178684c")

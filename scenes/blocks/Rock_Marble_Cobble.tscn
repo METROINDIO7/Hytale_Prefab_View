@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Rock_Marble_Cobble.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Rock_Marble_Cobble.png" id="3_tex"]
 
 [node name="RockMarbleCobble" instance=ExtResource("1_base")]
 block_id = "Rock_Marble_Cobble"
@@ -8,3 +10,6 @@ display_name = "Rock Marble Cobble"
 category = "Rock"
 search_tags = PackedStringArray("rock", "marble", "cobble")
 fallback_color = Color(0.85, 0.82, 0.78, 1)
+block_icon = ExtResource("2_icon")
+
+albedo_texture = ExtResource("3_tex")

@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_53c09bbd"]
+size = Vector3(1, 0.5, 1)
+
+[node name="SoilClayOceanBrickSmoothHalf" instance=ExtResource("1_base")]
+block_id = "Soil_Clay_Ocean_Brick_Smooth_Half"
+display_name = "Soil Clay Ocean Brick Smooth Half"
+category = "Soil"
+search_tags = PackedStringArray("soil", "clay", "ocean", "brick", "smooth", "half")
+fallback_color = Color(0.750, 0.650, 0.550, 1)
+
+custom_mesh = SubResource("CustomMesh")

@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Wood_Greenwood_Roof_Hollow.png" id="2_icon"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_317cac65"]
+size = Vector3(1, 0.5, 1)
+
+[node name="WoodGreenwoodRoofHollow" instance=ExtResource("1_base")]
+block_id = "Wood_Greenwood_Roof_Hollow"
+display_name = "Wood Greenwood Roof Hollow"
+category = "Wood"
+search_tags = PackedStringArray("wood", "greenwood", "roof", "hollow")
+fallback_color = Color(0.428, 0.764, 0.762, 1)
+block_icon = ExtResource("2_icon")
+
+custom_mesh = SubResource("CustomMesh")

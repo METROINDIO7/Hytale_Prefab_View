@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Metal_Copper_Pipe_Long.png" id="2_icon"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(0.5, 1, 0.5)
+[sub_resource type="CubeMesh" id="Mesh_e62e8844"]
+size = Vector3(0.5, 1, 0.5)
+
+[node name="MetalCopperPipeLong" instance=ExtResource("1_base")]
+block_id = "Metal_Copper_Pipe_Long"
+display_name = "Metal Copper Pipe Long"
+category = "Metal"
+search_tags = PackedStringArray("metal", "copper", "pipe", "long")
+fallback_color = Color(0.780, 0.520, 0.320, 1)
+block_icon = ExtResource("2_icon")
+
+custom_mesh = SubResource("CustomMesh")

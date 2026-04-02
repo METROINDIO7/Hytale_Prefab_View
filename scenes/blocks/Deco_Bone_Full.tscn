@@ -1,0 +1,66 @@
+[gd_scene format=3 uid="uid://a7c4a9d9bd1503"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Bone_FullBlock.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Bone_Side.png" id="3_tex"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3sknq"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.7309, 0.7399, 0.6652, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_77pl0"]
+bg_color = Color(0.52575, 0.53325003, 0.47100002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.80565, 0.81215, 0.7582, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_m8s2g"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.77575, 0.78325003, 0.721, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="DecoBoneFull" unique_id=1642843432 instance=ExtResource("1_base")]
+tooltip_text = "Deco Bone Full
+ID: Deco_Bone_Full
+Category: Bone"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_3sknq")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_77pl0")
+theme_override_styles/hover = SubResource("StyleBoxFlat_m8s2g")
+text = "Deco Bone Full"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Deco_Bone_Full"
+display_name = "Deco Bone Full"
+category = "Bone"
+search_tags = PackedStringArray("bone", "deco", "full")
+block_icon = ExtResource("2_icon")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.701, 0.711, 0.628, 1)

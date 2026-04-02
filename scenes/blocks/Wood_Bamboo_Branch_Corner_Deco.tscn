@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Wood_Bamboo_Branch_Corner_Deco.png" id="2_icon"]
+
+[node name="WoodBambooBranchCornerDeco" instance=ExtResource("1_base")]
+block_id = "Wood_Bamboo_Branch_Corner_Deco"
+display_name = "Wood Bamboo Branch Corner Deco"
+category = "Wood"
+search_tags = PackedStringArray("wood", "bamboo", "branch", "corner", "deco")
+fallback_color = Color(0.603, 0.605, 0.693, 1)
+block_icon = ExtResource("2_icon")

@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Rock_Slate_Brick_Pillar_Middle.png" id="2_icon"]
+
+[node name="RockSlateBrickPillarMiddle" instance=ExtResource("1_base")]
+block_id = "Rock_Slate_Brick_Pillar_Middle"
+display_name = "Rock Slate Brick Pillar Middle"
+category = "Rock"
+search_tags = PackedStringArray("rock", "slate", "brick", "pillar", "middle")
+fallback_color = Color(0.450, 0.480, 0.520, 1)
+block_icon = ExtResource("2_icon")

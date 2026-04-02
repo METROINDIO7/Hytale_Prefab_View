@@ -1,0 +1,76 @@
+[gd_scene format=3 uid="uid://add129d78055ca"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Build_Grey_Roof_Flat.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Dev_Grey_Neutral_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_04c289bc"]
+size = Vector3(1, 0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3uw2r"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8245, 0.47529998, 0.4942, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_asmmq"]
+bg_color = Color(0.60375, 0.31274998, 0.3285, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.87325, 0.62105, 0.6347, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hnf2n"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.85375, 0.56275, 0.57850003, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="BoxMesh" id="BoxMesh_pxo6v"]
+size = Vector3(1, 0.25, 1)
+
+[node name="BuildGreyRoofFlat" unique_id=115477391 instance=ExtResource("1_base")]
+tooltip_text = "Build Grey Roof Flat
+ID: Build_Grey_Roof_Flat
+Category: Build"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_3uw2r")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_asmmq")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hnf2n")
+text = "Build Grey Roof Flat"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Build_Grey_Roof_Flat"
+display_name = "Build Grey Roof Flat"
+category = "Build"
+search_tags = PackedStringArray("build", "grey", "roof", "flat")
+block_icon = ExtResource("2_icon")
+custom_mesh = SubResource("CustomMesh")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.805, 0.417, 0.438, 1)
+
+custom_mesh = SubResource("Mesh_04c289bc")

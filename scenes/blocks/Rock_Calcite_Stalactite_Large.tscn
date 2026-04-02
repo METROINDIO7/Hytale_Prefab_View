@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="RockCalciteStalactiteLarge" instance=ExtResource("1_base")]
+block_id = "Rock_Calcite_Stalactite_Large"
+display_name = "Rock Calcite Stalactite Large"
+category = "Rock"
+search_tags = PackedStringArray("rock", "calcite", "stalactite", "large")
+fallback_color = Color(0.477, 0.423, 0.705, 1)

@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Wood_Oak_Trunk_Stairs.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Wood_Trunk_Oak_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_04784662"]
+size = Vector3(1, 0.5, 1)
+
+[node name="WoodOakTrunkStairs" instance=ExtResource("1_base")]
+block_id = "Wood_Oak_Trunk_Stairs"
+display_name = "Wood Oak Trunk Stairs"
+category = "Wood"
+search_tags = PackedStringArray("wood", "oak", "trunk", "stairs")
+fallback_color = Color(0.701, 0.464, 0.834, 1)
+block_icon = ExtResource("2_icon")
+albedo_texture = ExtResource("3_tex")
+
+custom_mesh = SubResource("CustomMesh")

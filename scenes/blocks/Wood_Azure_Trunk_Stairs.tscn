@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Wood_Azure_Trunk_Stairs.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Wood_Trunk_Azure_Side.png" id="3_tex"]
+
+[node name="WoodAzureTrunkStairs" instance=ExtResource("1_base")]
+block_id = "Wood_Azure_Trunk_Stairs"
+display_name = "Wood Azure Trunk Stairs"
+category = "Wood"
+search_tags = PackedStringArray("wood", "azure", "trunk", "stairs")
+fallback_color = Color(0.779, 0.595, 0.781, 1)
+block_icon = ExtResource("2_icon")
+albedo_texture = ExtResource("3_tex")

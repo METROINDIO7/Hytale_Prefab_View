@@ -151,6 +151,18 @@ size_flags_horizontal = 3
 text = "Rock_Sandstone_White_Brick"
 placeholder_text = "Block identifier…"
 
+[node name="BlockCtrlHBox" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox" unique_id=1965234099]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="BtnDuplicateBlock" type="Button" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/BlockCtrlHBox" unique_id=1567890234]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 11
+toggle_mode = true
+text = "📋 Copy Block"
+
 [node name="Sep1" type="HSeparator" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox" unique_id=1541335145]
 layout_mode = 2
 
@@ -298,68 +310,68 @@ theme_override_font_sizes/font_size = 10
 toggle_mode = true
 text = "◯ Circle"
 
-[node name="SelShapeAdvancedRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+[node name="SelShapeAdvancedRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox" unique_id=1855544433]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="ShapeLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelShapeAdvancedRow"]
+[node name="ShapeLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelShapeAdvancedRow" unique_id=483464819]
 custom_minimum_size = Vector2(58, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
 text = "Shape:"
 
-[node name="SelShapeOption" type="OptionButton" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelShapeAdvancedRow"]
+[node name="SelShapeOption" type="OptionButton" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelShapeAdvancedRow" unique_id=1766092927]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SelModeRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+[node name="SelModeRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox" unique_id=883341374]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="ModeLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelModeRow"]
+[node name="ModeLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelModeRow" unique_id=769211749]
 custom_minimum_size = Vector2(58, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
 text = "Mode:"
 
-[node name="SelModeOption" type="OptionButton" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelModeRow"]
+[node name="SelModeOption" type="OptionButton" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelModeRow" unique_id=1583614555]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SelActionRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+[node name="SelActionRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox" unique_id=1872810283]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="ActionLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelActionRow"]
+[node name="ActionLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelActionRow" unique_id=695414226]
 custom_minimum_size = Vector2(58, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
 text = "Action:"
 
-[node name="SelActionOption" type="OptionButton" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelActionRow"]
+[node name="SelActionOption" type="OptionButton" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelActionRow" unique_id=791444773]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SelBorderRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+[node name="SelBorderRow" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox" unique_id=1108210490]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="BorderLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelBorderRow"]
+[node name="BorderLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelBorderRow" unique_id=1034676641]
 custom_minimum_size = Vector2(58, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
 text = "Border:"
 
-[node name="SelBorderSpin" type="SpinBox" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelBorderRow"]
-layout_mode = 2
+[node name="SelBorderSpin" type="SpinBox" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/SelBorderRow" unique_id=231771357]
 custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
 min_value = 1.0
 max_value = 16.0
 value = 1.0
 
 [node name="SelFillCheck" type="CheckBox" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox" unique_id=1940893409]
-visible = false
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
 button_pressed = true
@@ -680,7 +692,6 @@ theme_override_font_sizes/font_size = 10
 text = "Groups are Node3D containers.
 Hide groups to reveal inner
 structures without deleting."
-autowrap_mode = 3
 
 [node name="GrpSep" type="HSeparator" parent="RootVBox/WorkHBox/RightPanel/RightVBox/RightTabs/Groups/GM/GI" unique_id=579229453]
 layout_mode = 2

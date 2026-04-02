@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Wood_Camphor_Trunk_Stairs.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Wood_Trunk_Camphor.png" id="3_tex"]
+
+[node name="WoodCamphorTrunkStairs" instance=ExtResource("1_base")]
+block_id = "Wood_Camphor_Trunk_Stairs"
+display_name = "Wood Camphor Trunk Stairs"
+category = "Wood"
+search_tags = PackedStringArray("wood", "camphor", "trunk", "stairs")
+fallback_color = Color(0.662, 0.787, 0.779, 1)
+block_icon = ExtResource("2_icon")
+albedo_texture = ExtResource("3_tex")

@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="RockSandstoneStalactiteSmall" instance=ExtResource("1_base")]
+block_id = "Rock_Sandstone_Stalactite_Small"
+display_name = "Rock Sandstone Stalactite Small"
+category = "Rock"
+search_tags = PackedStringArray("rock", "sandstone", "stalactite", "small")
+fallback_color = Color(0.636, 0.711, 0.681, 1)

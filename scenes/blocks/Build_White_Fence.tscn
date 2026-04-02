@@ -1,0 +1,76 @@
+[gd_scene format=3 uid="uid://33ae9608449111"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Build_White_Fence.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Dev_White_Side.png" id="3_tex"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(0.1, 1, 1)
+[sub_resource type="CubeMesh" id="Mesh_a64861d8"]
+size = Vector3(0.1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3awut"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.514, 0.685, 0.5725, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_a0k30"]
+bg_color = Color(0.345, 0.48749998, 0.39374998, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.649, 0.7725, 0.69124997, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bi8kt"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.595, 0.73749995, 0.64374995, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="BoxMesh" id="BoxMesh_3g0q2"]
+size = Vector3(1, 1, 0.5)
+
+[node name="BuildWhiteFence" unique_id=1002822446 instance=ExtResource("1_base")]
+tooltip_text = "Build White Fence
+ID: Build_White_Fence
+Category: Build"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_3awut")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_a0k30")
+theme_override_styles/hover = SubResource("StyleBoxFlat_bi8kt")
+text = "Build White Fence"
+icon = ExtResource("2_icon")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Build_White_Fence"
+display_name = "Build White Fence"
+category = "Build"
+search_tags = PackedStringArray("build", "white", "fence")
+block_icon = ExtResource("2_icon")
+custom_mesh = SubResource("CustomMesh")
+albedo_texture = ExtResource("3_tex")
+fallback_color = Color(0.46, 0.65, 0.525, 1)
+
+custom_mesh = SubResource("Mesh_a64861d8")

@@ -30,322 +30,27 @@ var _rebuild_scheduled : bool = false
 var _bulk_edit_depth   : int = 0
 var _needs_change_emit : bool = false
 
-# ── Categories for auto-color (Based on actual Hytale block names) ───────────
-# Only 1x1 full cube blocks included (no stairs, roofs, half, beams, etc.)
+# ── Categories for auto-color (19 categories, cleaned) ───────────────────────
 const _CATEGORIES : Array = [
-	# ── ROCK FAMILY (Rock_*) ─────────────────────────────────────────────────
-	["Rock_Volcanic_Brick",      Color(0.72, 0.38, 0.28)],
-	["Rock_Volcanic_Cobble",     Color(0.45, 0.42, 0.40)],
-	["Rock_Volcanic_Cracked",    Color(0.55, 0.35, 0.30)],
-	["Rock_Limestone_Brick",     Color(0.85, 0.82, 0.70)],
-	["Rock_Limestone_Cobble",    Color(0.78, 0.75, 0.68)],
-	["Rock_Granite_Brick",       Color(0.65, 0.50, 0.55)],
-	["Rock_Granite_Cobble",      Color(0.58, 0.45, 0.50)],
-	["Rock_Marble_Brick",        Color(0.92, 0.90, 0.88)],
-	["Rock_Marble_Cobble",       Color(0.85, 0.82, 0.78)],
-	["Rock_Sandstone_Brick",     Color(0.88, 0.78, 0.55)],
-	["Rock_Sandstone_Cobble",    Color(0.82, 0.72, 0.50)],
-	["Rock_Slate_Brick",         Color(0.45, 0.48, 0.52)],
-	["Rock_Slate_Cobble",        Color(0.40, 0.43, 0.47)],
-	["Rock_Shale_Brick",         Color(0.55, 0.50, 0.48)],
-	["Rock_Shale_Cobble",        Color(0.50, 0.45, 0.43)],
-	["Rock_Quartzite_Brick",     Color(0.95, 0.92, 0.88)],
-	["Rock_Calcite_Brick",       Color(0.88, 0.85, 0.80)],
-	["Rock_Chalk_Brick",         Color(0.90, 0.88, 0.85)],
-	["Rock_Basalt_Brick",        Color(0.35, 0.35, 0.40)],
-	["Rock_Dawnstone_Brick",     Color(0.75, 0.70, 0.65)],
-	["Rock_Stone_Brick",         Color(0.55, 0.55, 0.58)],
-	["Rock_Stone_Cobble",        Color(0.50, 0.50, 0.52)],
-	["Rock_Rough",               Color(0.58, 0.56, 0.54)],
-	["Rock_Polished",            Color(0.70, 0.70, 0.72)],
-	["Rock_Smooth",              Color(0.75, 0.75, 0.77)],
-	
-	# ── RUBBLE (Rubble_*) ────────────────────────────────────────────────────
-	["Rubble_Stone",             Color(0.52, 0.50, 0.48)],
-	["Rubble_Volcanic",          Color(0.48, 0.38, 0.35)],
-	["Rubble_Sandstone",         Color(0.85, 0.75, 0.52)],
-	["Rubble_Marble",            Color(0.88, 0.85, 0.80)],
-	["Rubble_Granite",           Color(0.62, 0.48, 0.52)],
-	["Rubble_Limestone",         Color(0.82, 0.78, 0.68)],
-	["Rubble_Basalt",            Color(0.38, 0.38, 0.42)],
-	["Rubble_Quartzite",         Color(0.92, 0.88, 0.85)],
-	["Rubble_Calcite",           Color(0.85, 0.82, 0.78)],
-	["Rubble_Chalk",             Color(0.88, 0.85, 0.82)],
-	["Rubble_Shale",             Color(0.52, 0.48, 0.45)],
-	["Rubble_Slate",             Color(0.42, 0.45, 0.50)],
-	["Rubble_Dawnstone",         Color(0.72, 0.68, 0.62)],
-	["Rubble_Ice",               Color(0.75, 0.88, 0.95, 0.70)],
-	["Rubble_Magma_Cooled",      Color(0.45, 0.35, 0.30)],
-	["Rubble_Aqua",              Color(0.40, 0.65, 0.75, 0.75)],
-	["Rubble_Lime",              Color(0.75, 0.85, 0.65)],
-	
-	# ── SOIL & DIRT (Soil_Dirt*, Soil_Grass*) ────────────────────────────────
-	["Soil_Dirt",                Color(0.52, 0.36, 0.20)],
-	["Soil_Dirt_Cold",           Color(0.48, 0.35, 0.25)],
-	["Soil_Dirt_Dry",            Color(0.58, 0.42, 0.25)],
-	["Soil_Dirt_Wet",            Color(0.45, 0.30, 0.18)],
-	["Soil_Dirt_Lush",           Color(0.48, 0.38, 0.22)],
-	["Soil_Dirt_Burnt",          Color(0.35, 0.28, 0.22)],
-	["Soil_Dirt_Poisoned",       Color(0.42, 0.35, 0.28)],
-	["Soil_Dirt_Crystal",        Color(0.55, 0.45, 0.35, 0.80)],
-	["Soil_Dirt_Tilled",         Color(0.50, 0.35, 0.20)],
-	["Soil_Grass",               Color(0.28, 0.62, 0.22)],
-	["Soil_Grass_Cold",          Color(0.32, 0.58, 0.25)],
-	["Soil_Grass_Dry",           Color(0.38, 0.55, 0.22)],
-	["Soil_Grass_Wet",           Color(0.25, 0.55, 0.20)],
-	["Soil_Grass_Burnt",         Color(0.35, 0.45, 0.25)],
-	["Soil_Grass_Sunny",         Color(0.35, 0.68, 0.28)],
-	["Soil_Grass_Deep",          Color(0.22, 0.52, 0.18)],
-	["Soil_Grass_Full",          Color(0.30, 0.65, 0.24)],
-	
-	# ── SAND & GRAVEL (Soil_Sand*, Soil_Gravel*) ─────────────────────────────
-	["Soil_Sand",                Color(0.90, 0.82, 0.55)],
-	["Soil_Sand_Red",            Color(0.85, 0.55, 0.45)],
-	["Soil_Sand_White",          Color(0.95, 0.90, 0.75)],
-	["Soil_Sand_Ashen",          Color(0.75, 0.70, 0.65)],
-	["Soil_Gravel",              Color(0.58, 0.56, 0.54)],
-	["Soil_Gravel_Mossy",        Color(0.52, 0.58, 0.48)],
-	["Soil_Gravel_Sand",         Color(0.85, 0.78, 0.58)],
-	["Soil_Gravel_Sand_Red",     Color(0.80, 0.58, 0.48)],
-	["Soil_Gravel_Sand_White",   Color(0.90, 0.85, 0.72)],
-	["Soil_Aqua_Gravel",         Color(0.45, 0.65, 0.75)],
-	["Soil_Basalt_Gravel",       Color(0.40, 0.40, 0.45)],
-	["Soil_Calcite_Gravel",      Color(0.82, 0.80, 0.75)],
-	["Soil_Chalk_Gravel",        Color(0.85, 0.82, 0.78)],
-	["Soil_Lime_Gravel",         Color(0.75, 0.82, 0.65)],
-	["Soil_Magma_Cooled_Gravel", Color(0.48, 0.38, 0.35)],
-	["Soil_Marble_Gravel",       Color(0.88, 0.85, 0.80)],
-	["Soil_Quartzite_Gravel",    Color(0.92, 0.88, 0.85)],
-	["Soil_Shale_Gravel",        Color(0.55, 0.50, 0.48)],
-	["Soil_Slate_Gravel",        Color(0.45, 0.48, 0.52)],
-	["Soil_Volcanic_Gravel",     Color(0.50, 0.40, 0.38)],
-	["Soil_Pebbles",             Color(0.62, 0.58, 0.55)],
-	["Soil_Pebbles_Frozen",      Color(0.68, 0.72, 0.78)],
-	
-	# ── CLAY (Soil_Clay*) ────────────────────────────────────────────────────
-	["Soil_Clay",                Color(0.75, 0.65, 0.55)],
-	["Soil_Clay_Brick",          Color(0.72, 0.45, 0.35)],
-	["Soil_Clay_Raw_Brick",      Color(0.68, 0.55, 0.45)],
-	["Soil_Clay_Smooth",         Color(0.78, 0.68, 0.58)],
-	["Soil_Clay_Ocean",          Color(0.55, 0.70, 0.75)],
-	["Soil_Clay_Ocean_Brick",    Color(0.48, 0.65, 0.72)],
-	["Soil_Clay_Ocean_Brick_Smooth", Color(0.52, 0.68, 0.75)],
-	["Soil_Clay_Beige",          Color(0.85, 0.75, 0.60)],
-	["Soil_Clay_Black",          Color(0.35, 0.35, 0.38)],
-	["Soil_Clay_Blue",           Color(0.45, 0.55, 0.75)],
-	["Soil_Clay_Cyan",           Color(0.40, 0.70, 0.75)],
-	["Soil_Clay_Green",          Color(0.45, 0.65, 0.45)],
-	["Soil_Clay_Grey",           Color(0.65, 0.65, 0.68)],
-	["Soil_Clay_Lime",           Color(0.75, 0.85, 0.55)],
-	["Soil_Clay_Orange",         Color(0.85, 0.60, 0.35)],
-	["Soil_Clay_Pink",           Color(0.85, 0.65, 0.75)],
-	["Soil_Clay_Purple",         Color(0.65, 0.50, 0.75)],
-	["Soil_Clay_Red",            Color(0.75, 0.40, 0.35)],
-	["Soil_Clay_White",          Color(0.90, 0.88, 0.85)],
-	["Soil_Clay_Yellow",         Color(0.88, 0.80, 0.45)],
-	
-	# ── SNOW & ICE (Soil_Snow*) ──────────────────────────────────────────────
-	["Soil_Snow",                Color(0.95, 0.97, 1.00)],
-	["Soil_Snow_Brick",          Color(0.92, 0.94, 0.98)],
-	["Soil_Ash",                 Color(0.55, 0.52, 0.50)],
-	["Soil_Mud",                 Color(0.42, 0.32, 0.22)],
-	["Soil_Mud_Dry",             Color(0.52, 0.42, 0.32)],
-	["Soil_Hive",                Color(0.88, 0.75, 0.35)],
-	["Soil_Hive_Brick",          Color(0.85, 0.72, 0.32)],
-	["Soil_Hive_Corrupted",      Color(0.55, 0.40, 0.45)],
-	["Soil_Hive_Corrupted_Brick",Color(0.52, 0.38, 0.42)],
-	["Soil_Leaves",              Color(0.25, 0.45, 0.20)],
-	["Soil_Needles",             Color(0.30, 0.50, 0.25)],
-	["Soil_Roots_Poisoned",      Color(0.45, 0.35, 0.30)],
-	["Soil_Seaweed_Block",       Color(0.25, 0.55, 0.35, 0.85)],
-	["Soil_Pathway",             Color(0.65, 0.58, 0.48)],
-	
-	# ── WOOD PLANKS (Wood_*_Planks) ──────────────────────────────────────────
-	["Wood_Oak_Planks",          Color(0.62, 0.42, 0.22)],
-	["Wood_Birch_Planks",        Color(0.78, 0.68, 0.48)],
-	["Wood_Pine_Planks",         Color(0.58, 0.40, 0.22)],
-	["Wood_Darkwood_Planks",     Color(0.42, 0.28, 0.18)],
-	["Wood_Redwood_Planks",      Color(0.68, 0.38, 0.28)],
-	["Wood_Goldenwood_Planks",   Color(0.85, 0.70, 0.35)],
-	["Wood_Greenwood_Planks",    Color(0.55, 0.65, 0.40)],
-	["Wood_Hardwood_Planks",     Color(0.58, 0.38, 0.25)],
-	["Wood_Lightwood_Planks",    Color(0.78, 0.68, 0.55)],
-	["Wood_Softwood_Planks",     Color(0.72, 0.58, 0.42)],
-	["Wood_Tropicalwood_Planks", Color(0.65, 0.48, 0.32)],
-	["Wood_Drywood_Planks",      Color(0.68, 0.52, 0.35)],
-	["Wood_Blackwood_Planks",    Color(0.38, 0.28, 0.22)],
-	["Wood_Deadwood_Planks",     Color(0.55, 0.42, 0.32)],
-	["Wood_Amber_Planks",        Color(0.75, 0.55, 0.25)],
-	["Wood_Ash_Planks",          Color(0.65, 0.55, 0.45)],
-	["Wood_Aspen_Planks",        Color(0.75, 0.65, 0.50)],
-	["Wood_Azure_Planks",        Color(0.55, 0.65, 0.80)],
-	["Wood_Bamboo_Planks",       Color(0.72, 0.68, 0.40)],
-	["Wood_Banyan_Planks",       Color(0.58, 0.45, 0.32)],
-	["Wood_Beech_Planks",        Color(0.70, 0.58, 0.42)],
-	["Wood_Bottletree_Planks",   Color(0.65, 0.52, 0.38)],
-	["Wood_Burnt_Planks",        Color(0.35, 0.28, 0.25)],
-	["Wood_Camphor_Planks",      Color(0.62, 0.48, 0.35)],
-	["Wood_Cedar_Planks",        Color(0.58, 0.42, 0.28)],
-	["Wood_Crystal_Planks",      Color(0.75, 0.85, 0.95, 0.70)],
-	["Wood_Fig_Blue_Planks",     Color(0.50, 0.58, 0.70)],
-	["Wood_Fir_Planks",          Color(0.65, 0.52, 0.38)],
-	["Wood_Fire_Planks",         Color(0.75, 0.45, 0.30)],
-	["Wood_Gumboab_Planks",      Color(0.62, 0.48, 0.35)],
-	["Wood_Ice_Planks",          Color(0.80, 0.90, 0.95, 0.75)],
-	["Wood_Jungle_Planks",       Color(0.55, 0.45, 0.30)],
-	["Wood_Maple_Planks",        Color(0.68, 0.48, 0.32)],
-	["Wood_Palm_Planks",         Color(0.75, 0.62, 0.40)],
-	["Wood_Palo_Planks",         Color(0.65, 0.52, 0.38)],
-	["Wood_Petrified_Planks",    Color(0.58, 0.48, 0.42)],
-	["Wood_Poisoned_Planks",     Color(0.48, 0.55, 0.40)],
-	["Wood_Sallow_Planks",       Color(0.68, 0.58, 0.45)],
-	["Wood_Spiral_Planks",       Color(0.62, 0.52, 0.42)],
-	["Wood_Stormbark_Planks",    Color(0.52, 0.45, 0.40)],
-	["Wood_Windwillow_Planks",   Color(0.70, 0.65, 0.50)],
-	["Wood_Wisteria_Wild_Planks",Color(0.65, 0.55, 0.60)],
-	
-	# ── WOOD BEAMS & DECORATIVE ──────────────────────────────────────────────
-	["Wood_Oak_Beam",            Color(0.58, 0.38, 0.20)],
-	["Wood_Birch_Beam",          Color(0.72, 0.62, 0.42)],
-	["Wood_Pine_Beam",           Color(0.52, 0.35, 0.18)],
-	["Wood_Darkwood_Beam",       Color(0.38, 0.25, 0.15)],
-	["Wood_Redwood_Beam",        Color(0.62, 0.35, 0.25)],
-	["Wood_Goldenwood_Beam",     Color(0.80, 0.65, 0.30)],
-	["Wood_Greenwood_Beam",      Color(0.50, 0.60, 0.35)],
-	["Wood_Hardwood_Beam",       Color(0.52, 0.35, 0.22)],
-	["Wood_Lightwood_Beam",      Color(0.72, 0.62, 0.50)],
-	["Wood_Softwood_Beam",       Color(0.68, 0.52, 0.38)],
-	["Wood_Tropicalwood_Beam",   Color(0.60, 0.45, 0.28)],
-	["Wood_Drywood_Beam",        Color(0.62, 0.48, 0.32)],
-	["Wood_Blackwood_Beam",      Color(0.35, 0.25, 0.20)],
-	["Wood_Deadwood_Beam",       Color(0.50, 0.38, 0.28)],
-	["Wood_Oak_Decorative",      Color(0.65, 0.45, 0.25)],
-	["Wood_Darkwood_Decorative", Color(0.45, 0.32, 0.22)],
-	["Wood_Redwood_Decorative",  Color(0.70, 0.42, 0.32)],
-	["Wood_Goldenwood_Decorative", Color(0.85, 0.68, 0.35)],
-	["Wood_Greenwood_Decorative", Color(0.58, 0.68, 0.42)],
-	["Wood_Hardwood_Decorative", Color(0.55, 0.40, 0.28)],
-	["Wood_Lightwood_Decorative", Color(0.75, 0.65, 0.52)],
-	["Wood_Softwood_Decorative", Color(0.70, 0.55, 0.40)],
-	["Wood_Tropicalwood_Decorative", Color(0.62, 0.48, 0.32)],
-	["Wood_Drywood_Decorative",  Color(0.65, 0.50, 0.35)],
-	["Wood_Blackwood_Decorative", Color(0.40, 0.30, 0.25)],
-	["Wood_Deadwood_Decorative", Color(0.52, 0.42, 0.32)],
-	["Wood_Oak_Ornate",          Color(0.68, 0.48, 0.28)],
-	["Wood_Darkwood_Ornate",     Color(0.48, 0.35, 0.25)],
-	["Wood_Redwood_Ornate",      Color(0.72, 0.45, 0.35)],
-	["Wood_Goldenwood_Ornate",   Color(0.88, 0.72, 0.38)],
-	["Wood_Greenwood_Ornate",    Color(0.60, 0.70, 0.45)],
-	["Wood_Hardwood_Ornate",     Color(0.58, 0.42, 0.30)],
-	["Wood_Lightwood_Ornate",    Color(0.78, 0.68, 0.55)],
-	["Wood_Softwood_Ornate",     Color(0.72, 0.58, 0.42)],
-	["Wood_Tropicalwood_Ornate", Color(0.65, 0.50, 0.35)],
-	["Wood_Drywood_Ornate",      Color(0.68, 0.52, 0.38)],
-	["Wood_Blackwood_Ornate",    Color(0.42, 0.32, 0.28)],
-	["Wood_Deadwood_Ornate",     Color(0.55, 0.45, 0.35)],
-	
-	# ── GLASS & TRANSPARENT ──────────────────────────────────────────────────
-	["Glass_Clear",              Color(0.85, 0.92, 0.98, 0.35)],
-	["Glass_Stained",            Color(0.75, 0.85, 0.95, 0.45)],
-	["Glass_Blue",               Color(0.45, 0.60, 0.85, 0.50)],
-	["Glass_Red",                Color(0.85, 0.40, 0.40, 0.50)],
-	["Glass_Green",              Color(0.40, 0.75, 0.45, 0.50)],
-	["Glass_Yellow",             Color(0.90, 0.85, 0.40, 0.50)],
-	["Glass_Purple",             Color(0.70, 0.45, 0.85, 0.50)],
-	["Glass_Orange",             Color(0.90, 0.60, 0.35, 0.50)],
-	
-	# ── METAL & ORE ──────────────────────────────────────────────────────────
-	["Metal_Iron",               Color(0.72, 0.74, 0.78)],
-	["Metal_Gold",               Color(0.95, 0.80, 0.20)],
-	["Metal_Copper",             Color(0.78, 0.52, 0.32)],
-	["Metal_Bronze",             Color(0.80, 0.60, 0.35)],
-	["Metal_Silver",             Color(0.85, 0.85, 0.90)],
-	["Metal_Steel",              Color(0.65, 0.68, 0.72)],
-	["Metal_Cobalt",             Color(0.40, 0.55, 0.75)],
-	["Metal_Mithril",            Color(0.60, 0.85, 0.90)],
-	["Metal_Adamantite",         Color(0.55, 0.45, 0.65)],
-	["Metal_Onyxium",            Color(0.45, 0.40, 0.50)],
-	["Metal_Thorium",            Color(0.55, 0.65, 0.55)],
-	["Metal_Scrap",              Color(0.58, 0.55, 0.52)],
-	["Ore_Iron",                 Color(0.68, 0.55, 0.48)],
-	["Ore_Gold",                 Color(0.85, 0.70, 0.35)],
-	["Ore_Copper",               Color(0.72, 0.48, 0.35)],
-	["Ore_Cobalt",               Color(0.45, 0.55, 0.70)],
-	["Ore_Mithril",              Color(0.55, 0.75, 0.85)],
-	["Ore_Adamantite",           Color(0.50, 0.40, 0.60)],
-	["Ore_Onyxium",              Color(0.42, 0.38, 0.48)],
-	["Ore_Thorium",              Color(0.50, 0.60, 0.50)],
-	
-	# ── SPECIAL & DECORATIVE ─────────────────────────────────────────────────
-	["Water",                    Color(0.20, 0.50, 0.90, 0.65)],
-	["Lava",                     Color(0.95, 0.40, 0.10, 0.80)],
-	["Fire",                     Color(0.95, 0.50, 0.15, 0.85)],
-	["Ice_Solid",                Color(0.75, 0.88, 0.95, 0.70)],
-	["Frost",                    Color(0.82, 0.92, 0.98, 0.75)],
-	["Crystal",                  Color(0.85, 0.75, 0.95, 0.65)],
-	["Gem",                      Color(0.75, 0.85, 0.95, 0.70)],
-	["Lamp",                     Color(0.95, 0.88, 0.50)],
-	["Lantern",                  Color(0.92, 0.82, 0.45)],
-	["Torch",                    Color(0.90, 0.75, 0.35)],
-	["Light",                    Color(0.98, 0.95, 0.85)],
-	["Glow",                     Color(0.85, 0.95, 0.85, 0.70)],
-	["Chest",                    Color(0.75, 0.60, 0.30)],
-	["Barrel",                   Color(0.65, 0.45, 0.25)],
-	["Crate",                    Color(0.58, 0.42, 0.22)],
-	["Bookshelf",                Color(0.55, 0.38, 0.28)],
-	["Fabric",                   Color(0.80, 0.50, 0.60)],
-	["Cloth",                    Color(0.78, 0.48, 0.58)],
-	["Carpet",                   Color(0.85, 0.55, 0.65)],
-	["Wool",                     Color(0.88, 0.60, 0.70)],
-	["Concrete",                 Color(0.70, 0.70, 0.75)],
-	["Tile",                     Color(0.75, 0.72, 0.68)],
-	["Ceramic",                  Color(0.82, 0.70, 0.60)],
-	["Terracotta",               Color(0.78, 0.52, 0.38)],
-	["Adobe",                    Color(0.85, 0.65, 0.48)],
-	["Brick_Red",                Color(0.72, 0.38, 0.28)],
-	["Brick_Dark",               Color(0.55, 0.35, 0.28)],
-	["Tile_Mosaic",              Color(0.75, 0.65, 0.55)],
-	
-	# ── LEAVES & FOLIAGE ─────────────────────────────────────────────────────
-	["Leaf_Oak",                 Color(0.22, 0.55, 0.18, 0.85)],
-	["Leaf_Birch",               Color(0.28, 0.62, 0.22, 0.85)],
-	["Leaf_Pine",                Color(0.18, 0.45, 0.15, 0.85)],
-	["Leaf_Fir",                 Color(0.15, 0.40, 0.12, 0.85)],
-	["Leaf_Maple",               Color(0.35, 0.60, 0.25, 0.85)],
-	["Leaf_Jungle",              Color(0.25, 0.55, 0.20, 0.85)],
-	["Leaf_Palm",                Color(0.30, 0.58, 0.25, 0.85)],
-	["Leaf_Azure",               Color(0.35, 0.55, 0.65, 0.80)],
-	["Leaf_Crystal",             Color(0.55, 0.75, 0.85, 0.70)],
-	["Leaf_Ice",                 Color(0.65, 0.85, 0.95, 0.70)],
-	["Leaf_Fire",                Color(0.75, 0.45, 0.25, 0.80)],
-	["Leaf_Poisoned",            Color(0.45, 0.55, 0.35, 0.80)],
-	["Leaf_Burnt",               Color(0.35, 0.30, 0.25, 0.80)],
-	["Leaf_Dry",                 Color(0.55, 0.50, 0.30, 0.80)],
-	["Foliage",                  Color(0.25, 0.58, 0.20, 0.80)],
-	["Flower",                   Color(0.95, 0.60, 0.75)],
-	["Plant",                    Color(0.30, 0.60, 0.25)],
-	["Vine",                     Color(0.28, 0.55, 0.22)],
-	["Crop",                     Color(0.45, 0.65, 0.25)],
-	["Hay",                      Color(0.88, 0.75, 0.35)],
-	["Straw",                    Color(0.85, 0.72, 0.32)],
-	
-	# ── VILLAGE WALLS ────────────────────────────────────────────────────────
-	["Wood_Village_Wall",        Color(0.65, 0.52, 0.38)],
-	["Wood_Village_Wall_Ocean",  Color(0.45, 0.65, 0.75)],
-	["Wood_Village_Wall_Black",  Color(0.35, 0.35, 0.38)],
-	["Wood_Village_Wall_Blue",   Color(0.45, 0.55, 0.75)],
-	["Wood_Village_Wall_Cyan",   Color(0.40, 0.70, 0.75)],
-	["Wood_Village_Wall_Green",  Color(0.45, 0.65, 0.45)],
-	["Wood_Village_Wall_Grey",   Color(0.65, 0.65, 0.68)],
-	["Wood_Village_Wall_GreyDark", Color(0.48, 0.48, 0.52)],
-	["Wood_Village_Wall_Lime",   Color(0.75, 0.85, 0.55)],
-	["Wood_Village_Wall_Orange", Color(0.85, 0.60, 0.35)],
-	["Wood_Village_Wall_Pink",   Color(0.85, 0.65, 0.75)],
-	["Wood_Village_Wall_Purple", Color(0.65, 0.50, 0.75)],
-	["Wood_Village_Wall_Red",    Color(0.75, 0.40, 0.35)],
-	["Wood_Village_Wall_RedDark",Color(0.65, 0.35, 0.30)],
-	["Wood_Village_Wall_White",  Color(0.90, 0.88, 0.85)],
-	["Wood_Village_Wall_Yellow", Color(0.88, 0.80, 0.45)],
+	["Beams",              Color(0.65, 0.52, 0.38)],  # (11)
+	["Bone",               Color(0.75, 0.75, 0.75)],  # (3)
+	["Build_Black_Cube",   Color(0.60, 0.70, 0.75)],  # (58)
+	["Clay",               Color(0.72, 0.45, 0.35)],  # (19)
+	["Cloth_Block_Wool",   Color(0.85, 0.48, 0.65)],  # (60)
+	["Deco_Iron_Bars",     Color(0.75, 0.75, 0.75)],  # (4)
+	["Dirt",               Color(0.52, 0.36, 0.20)],  # (17)
+	["Fluid_Lava",         Color(0.85, 0.40, 0.10)],  # (6)
+	["Metal_Iron",         Color(0.72, 0.74, 0.78)],  # (80)
+	["Ore_Iron_Basalt",    Color(0.68, 0.55, 0.48)],  # (14)
+	["Planks",             Color(0.62, 0.42, 0.22)],  # (11)
+	["Rock_Stone_Brick",   Color(0.55, 0.55, 0.58)],  # (608)
+	["Rubble_Stone",       Color(0.52, 0.50, 0.48)],  # (32)
+	["Sand",               Color(0.90, 0.82, 0.55)],  # (19)
+	["Snow",               Color(0.92, 0.94, 0.98)],  # (14)
+	["Soil",               Color(0.28, 0.62, 0.22)],  # (128)
+	["Wood",               Color(0.62, 0.42, 0.22)],  # (356)
+	["Wood Dec",           Color(0.65, 0.52, 0.38)],  # (11)
+	["Wood Orn",           Color(0.75, 0.62, 0.42)],  # (11)
 ]
 
 
@@ -598,13 +303,16 @@ func _get_render_mesh(bname: String) -> Mesh:
 		return _render_mesh_cache[bname] as Mesh
 	
 	var block_def := BlockCatalog.get_definition(bname)
+	if block_def.is_empty():
+		print("No definition for ", bname)
+		return null
+	
 	var mesh := block_def.get("custom_mesh", null) as Mesh
 	if mesh != null:
 		mesh = mesh.duplicate(true)
 	else:
-		var box := BoxMesh.new()
-		box.size = Vector3.ONE * (BLOCK_SIZE * 0.97)
-		mesh = box
+		# Create custom cube mesh with proper UVs for full texture per face
+		mesh = _create_cube_mesh_with_full_uvs()
 	
 	var material := _build_block_material(block_def, _get_color(bname))
 	_apply_material_to_mesh(mesh, material)
@@ -618,17 +326,120 @@ func _build_block_material(block_def: Dictionary, base_color: Color) -> Material
 	mat.albedo_color = albedo
 	mat.roughness = 0.75
 	mat.metallic = 0.05
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED  # Disable culling to show both sides
 	
 	var tex := block_def.get("albedo_texture", null) as Texture2D
+	print("Texture for ", block_def.get("block_id", "unknown"), ": ", tex != null)
 	if tex != null:
 		mat.albedo_texture = tex
-		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	
 	if albedo.a < 1.0:
 		mat.transparency = StandardMaterial3D.TRANSPARENCY_ALPHA
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	
 	return mat
+
+
+func _create_cube_mesh_with_full_uvs() -> Mesh:
+	# Create a cube mesh with proper UVs so each face uses the full texture (0-1 UVs)
+	var mesh := ArrayMesh.new()
+	
+	var size := BLOCK_SIZE * 0.97
+	var half_size := size * 0.5
+	
+	# Define vertices for a cube (counter-clockwise winding for correct normals)
+	var vertices := PackedVector3Array([
+		# Front face (Z+)
+		Vector3(-half_size, -half_size, half_size),  # bottom-left
+		Vector3(half_size, -half_size, half_size),   # bottom-right
+		Vector3(half_size, half_size, half_size),    # top-right
+		Vector3(-half_size, half_size, half_size),   # top-left
+		
+		# Back face (Z-)
+		Vector3(half_size, -half_size, -half_size),   # bottom-left
+		Vector3(-half_size, -half_size, -half_size),  # bottom-right
+		Vector3(-half_size, half_size, -half_size),   # top-right
+		Vector3(half_size, half_size, -half_size),    # top-left
+		
+		# Left face (X-)
+		Vector3(-half_size, -half_size, -half_size),  # bottom-left
+		Vector3(-half_size, -half_size, half_size),   # bottom-right
+		Vector3(-half_size, half_size, half_size),    # top-right
+		Vector3(-half_size, half_size, -half_size),   # top-left
+		
+		# Right face (X+)
+		Vector3(half_size, -half_size, half_size),    # bottom-left
+		Vector3(half_size, -half_size, -half_size),   # bottom-right
+		Vector3(half_size, half_size, -half_size),    # top-right
+		Vector3(half_size, half_size, half_size),     # top-left
+		
+		# Top face (Y+)
+		Vector3(-half_size, half_size, half_size),    # bottom-left
+		Vector3(half_size, half_size, half_size),     # bottom-right
+		Vector3(half_size, half_size, -half_size),    # top-right
+		Vector3(-half_size, half_size, -half_size),   # top-left
+		
+		# Bottom face (Y-)
+		Vector3(-half_size, -half_size, -half_size),  # bottom-left
+		Vector3(half_size, -half_size, -half_size),   # bottom-right
+		Vector3(half_size, -half_size, half_size),    # top-right
+		Vector3(-half_size, -half_size, half_size)    # top-left
+	])
+	
+	# UVs - each face uses full texture (0-1), corrected for proper orientation
+	var uvs := PackedVector2Array()
+	for i in range(6):  # 6 faces
+		uvs.append_array([
+			Vector2(0, 1),  # bottom-left
+			Vector2(1, 1),  # bottom-right
+			Vector2(1, 0),  # top-right
+			Vector2(0, 0)   # top-left
+		])
+	
+	# Normals (one per vertex, inverted for correct culling)
+	var normals := PackedVector3Array([
+		# Front (Z- - inverted)
+		Vector3(0, 0, -1), Vector3(0, 0, -1), Vector3(0, 0, -1), Vector3(0, 0, -1),
+		# Back (Z+ - inverted)
+		Vector3(0, 0, 1), Vector3(0, 0, 1), Vector3(0, 0, 1), Vector3(0, 0, 1),
+		# Left (X+ - inverted)
+		Vector3(1, 0, 0), Vector3(1, 0, 0), Vector3(1, 0, 0), Vector3(1, 0, 0),
+		# Right (X- - inverted)
+		Vector3(-1, 0, 0), Vector3(-1, 0, 0), Vector3(-1, 0, 0), Vector3(-1, 0, 0),
+		# Top (Y- - inverted)
+		Vector3(0, -1, 0), Vector3(0, -1, 0), Vector3(0, -1, 0), Vector3(0, -1, 0),
+		# Bottom (Y+ - inverted)
+		Vector3(0, 1, 0), Vector3(0, 1, 0), Vector3(0, 1, 0), Vector3(0, 1, 0)
+	])
+	
+	# Indices for triangles (clockwise winding to match inverted normals)
+	var indices := PackedInt32Array([
+		# Front face (0-3) - clockwise
+		0, 1, 2, 2, 3, 0,
+		# Back face (4-7) - clockwise
+		4, 5, 6, 6, 7, 4,
+		# Left face (8-11) - clockwise
+		8, 9, 10, 10, 11, 8,
+		# Right face (12-15) - clockwise
+		12, 13, 14, 14, 15, 12,
+		# Top face (16-19) - clockwise
+		16, 17, 18, 18, 19, 16,
+		# Bottom face (20-23) - clockwise
+		20, 21, 22, 22, 23, 20
+	])
+	
+	# Create arrays
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = indices
+	
+	# Add surface
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	
+	return mesh
 
 
 func _apply_material_to_mesh(mesh: Mesh, material: Material) -> void:

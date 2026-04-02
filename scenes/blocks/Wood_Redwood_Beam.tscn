@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Wood_Redwood_Beam.png" id="2_icon"]
 
 [node name="WoodRedwoodBeam" instance=ExtResource("1_base")]
 block_id = "Wood_Redwood_Beam"
@@ -8,3 +9,4 @@ display_name = "Wood Redwood Beam"
 category = "Beams"
 search_tags = PackedStringArray("wood", "redwood", "beam")
 fallback_color = Color(0.62, 0.35, 0.25, 1)
+block_icon = ExtResource("2_icon")

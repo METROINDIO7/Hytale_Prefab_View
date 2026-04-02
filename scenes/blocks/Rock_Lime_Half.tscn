@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Rock_Lime_Half.png" id="2_icon"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_44c35b6e"]
+size = Vector3(1, 0.5, 1)
+
+[node name="RockLimeHalf" instance=ExtResource("1_base")]
+block_id = "Rock_Lime_Half"
+display_name = "Rock Lime Half"
+category = "Rock"
+search_tags = PackedStringArray("rock", "lime", "half")
+fallback_color = Color(0.607, 0.356, 0.374, 1)
+block_icon = ExtResource("2_icon")
+
+custom_mesh = SubResource("CustomMesh")

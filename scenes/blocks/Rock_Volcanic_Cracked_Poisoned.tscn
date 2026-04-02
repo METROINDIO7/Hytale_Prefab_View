@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Rock_Volcanic_Cracked_Poisoned.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Rock_Stone_Poisoned.png" id="3_tex"]
+
+[node name="RockVolcanicCrackedPoisoned" instance=ExtResource("1_base")]
+block_id = "Rock_Volcanic_Cracked_Poisoned"
+display_name = "Rock Volcanic Cracked Poisoned"
+category = "Rock"
+search_tags = PackedStringArray("rock", "volcanic", "cracked", "poisoned")
+fallback_color = Color(0.550, 0.350, 0.300, 1)
+block_icon = ExtResource("2_icon")
+
+albedo_texture = ExtResource("3_tex")

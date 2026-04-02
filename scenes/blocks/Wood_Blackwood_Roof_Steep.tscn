@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Wood_Blackwood_Roof_Steep.png" id="2_icon"]
+[sub_resource type="CubeMesh" id="CustomMesh"]
+size = Vector3(1, 0.5, 1)
+[sub_resource type="CubeMesh" id="Mesh_4f75e729"]
+size = Vector3(1, 0.5, 1)
+
+[node name="WoodBlackwoodRoofSteep" instance=ExtResource("1_base")]
+block_id = "Wood_Blackwood_Roof_Steep"
+display_name = "Wood Blackwood Roof Steep"
+category = "Wood"
+search_tags = PackedStringArray("wood", "blackwood", "roof", "steep")
+fallback_color = Color(0.446, 0.748, 0.446, 1)
+block_icon = ExtResource("2_icon")
+
+custom_mesh = SubResource("CustomMesh")

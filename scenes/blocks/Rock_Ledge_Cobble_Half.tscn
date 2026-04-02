@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+
+[node name="RockLedgeCobbleHalf" instance=ExtResource("1_base")]
+block_id = "Rock_Ledge_Cobble_Half"
+display_name = "Rock Ledge Cobble Half"
+category = "Rock"
+search_tags = PackedStringArray("rock", "ledge", "cobble", "half")
+fallback_color = Color(0.834, 0.740, 0.836, 1)

@@ -1,0 +1,65 @@
+[gd_scene format=3 uid="uid://8982d8b60b1b74"]
+
+[ext_resource type="PackedScene" path="res://scenes/block_palette_button.tscn" id="1_base"]
+[ext_resource type="Texture2D" path="res://2d/Icons/ItemsGenerated/Cloth_Blue.png" id="2_0xlf1"]
+[ext_resource type="Texture2D" path="res://2d/BlockTextures/Cloth_Blue.png" id="2_tex"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_44lq5"]
+bg_color = Color(0.16, 0.16, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.802, 0.532, 0.622, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nwl0w"]
+bg_color = Color(0.585, 0.35999998, 0.435, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.857, 0.662, 0.727, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q34nr"]
+bg_color = Color(0.244, 0.244, 0.26200002, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.835, 0.61, 0.685, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="ClothBlockWoolBlue" unique_id=1629816546 instance=ExtResource("1_base")]
+tooltip_text = "Cloth Block Wool Blue
+ID: Cloth_Block_Wool_Blue
+Category: Cloth"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_44lq5")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_nwl0w")
+theme_override_styles/hover = SubResource("StyleBoxFlat_q34nr")
+text = "Cloth Block Wool Blue"
+icon = ExtResource("2_0xlf1")
+alignment = 0
+text_overrun_behavior = 3
+clip_text = true
+expand_icon = true
+block_id = "Cloth_Block_Wool_Blue"
+display_name = "Cloth Block Wool Blue"
+category = "Cloth"
+search_tags = PackedStringArray("cloth", "block", "wool", "blue")
+albedo_texture = ExtResource("2_tex")
+fallback_color = Color(0.78, 0.48, 0.58, 1)
