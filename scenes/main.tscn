@@ -280,6 +280,83 @@ size_flags_horizontal = 3
 min_value = -64.0
 max_value = 255.0
 
+[node name="Sep1b" type="HSeparator" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+layout_mode = 2
+
+[node name="LblMirror" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+modulate = Color(0.7, 0.8, 1, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "MIRROR"
+
+[node name="MirrorHBox" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="MirrorXBtn" type="Button" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/MirrorHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Mirror on X axis"
+theme_override_font_sizes/font_size = 10
+toggle_mode = true
+text = "↔ X"
+
+[node name="MirrorYBtn" type="Button" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/MirrorHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Mirror on Y axis"
+theme_override_font_sizes/font_size = 10
+toggle_mode = true
+text = "↕ Y"
+
+[node name="MirrorZBtn" type="Button" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/MirrorHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Mirror on Z axis"
+theme_override_font_sizes/font_size = 10
+toggle_mode = true
+text = "⬌ Z"
+
+[node name="MirrorOffsetHBox" type="HBoxContainer" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="OffsetLbl" type="Label" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/MirrorOffsetHBox"]
+custom_minimum_size = Vector2(46, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "Center:"
+
+[node name="MirrorOffsetX" type="SpinBox" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/MirrorOffsetHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -256.0
+max_value = 256.0
+value = 0.0
+tooltip_text = "Mirror center X offset"
+
+[node name="MirrorOffsetY" type="SpinBox" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/MirrorOffsetHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -256.0
+max_value = 256.0
+value = 0.0
+tooltip_text = "Mirror center Y offset"
+
+[node name="MirrorOffsetZ" type="SpinBox" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox/MirrorOffsetHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -256.0
+max_value = 256.0
+value = 0.0
+tooltip_text = "Mirror center Z offset"
+
 [node name="Sep2" type="HSeparator" parent="RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox" unique_id=70865277]
 layout_mode = 2
 

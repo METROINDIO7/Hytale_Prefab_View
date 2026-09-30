@@ -39,6 +39,14 @@ extends Control
 @onready var _bounds_lbl    : Label    = %BoundsLbl
 @onready var _coord_lbl     : Label    = %CoordLbl
 
+# Mirror
+@onready var _mirror_x_btn  : Button   = %MirrorXBtn
+@onready var _mirror_y_btn  : Button   = %MirrorYBtn
+@onready var _mirror_z_btn  : Button   = %MirrorZBtn
+@onready var _mirror_offset_x : SpinBox = %MirrorOffsetX
+@onready var _mirror_offset_y : SpinBox = %MirrorOffsetY
+@onready var _mirror_offset_z : SpinBox = %MirrorOffsetZ
+
 # Bottom palette
 @onready var _palette_tabs      : TabContainer  = %PaletteTabs
 @onready var _palette_search    : LineEdit      = %PaletteSearch
@@ -69,11 +77,12 @@ extends Control
 
 
 # ═══ File dialogs ══════════════════════════════════════════════════════════════
-var _dlg_import  : FileDialog
-var _dlg_export  : FileDialog
-var _dlg_save    : FileDialog
-var _dlg_open    : FileDialog
-var _dlg_img     : FileDialog
+var _dlg_import      : FileDialog
+var _dlg_export      : FileDialog
+var _dlg_save        : FileDialog
+var _dlg_open        : FileDialog
+var _dlg_img         : FileDialog
+var _dlg_assets_zip  : FileDialog
 
 
 # ═══ Runtime state ═════════════════════════════════════════════════════════════
@@ -83,12 +92,15 @@ var _active_tool  : BlockEditor.Tool = BlockEditor.Tool.SELECT
 var _bottom_open  : bool   = true
 var _grid_mesh    : MeshInstance3D
 
-const BLOCK_BUTTON_SCENE := preload("res://scenes/block_palette_button.tscn")
-
 # ═══ BLOCK PALETTE ═══════════════════════════════════════════════════════════
-const BLOCK_PALETTE : Dictionary = {}
 var _palette_buttons : Array = []
 var _copy_block_mode : bool = false
+
+# ── ASSETS IMPORT THREAD ──────────────────────────────────────────────────────
+var _import_thread   : Thread = null
+var _importer        : HytaleImporter = null
+var _import_overlay  : Control = null
+var _import_label    : Label = null
 
 
 # ── UNDO/REDO SYSTEM ──────────────────────────────────────────────────────────
@@ -154,6 +166,16 @@ func _on_file_menu(id: int) -> void:
 			_refresh_groups()
 			_clear_all_cameras()
 			_sync_undo_baseline(true)
+			_mirror_x_btn.button_pressed = false
+			_mirror_y_btn.button_pressed = false
+			_mirror_z_btn.button_pressed = false
+			_editor.set_mirror_axis(0, false)
+			_editor.set_mirror_axis(1, false)
+			_editor.set_mirror_axis(2, false)
+			_mirror_offset_x.value = 0
+			_mirror_offset_y.value = 0
+			_mirror_offset_z.value = 0
+			_editor.set_mirror_offset(Vector3i.ZERO)
 			_status("New project.")
 		11: _dlg_open.popup_centered(Vector2i(900, 620))
 		12: _dlg_save.popup_centered(Vector2i(900, 620))
@@ -163,6 +185,7 @@ func _on_file_menu(id: int) -> void:
 				_status("⚠ No blocks to export.")
 			else:
 				_dlg_export.popup_centered(Vector2i(900, 620))
+		15: _dlg_assets_zip.popup_centered(Vector2i(900, 620))
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -258,6 +281,18 @@ func _restore_state(state: Dictionary) -> void:
 			var entry := _ref_mgr.get_entry_for_camera(cam)
 			if entry:
 				_pick_cam(cam, entry)
+
+	# Restore mirror state
+	_mirror_x_btn.button_pressed = state.get("mirror_x", false)
+	_mirror_y_btn.button_pressed = state.get("mirror_y", false)
+	_mirror_z_btn.button_pressed = state.get("mirror_z", false)
+	_editor.set_mirror_axis(0, _mirror_x_btn.button_pressed)
+	_editor.set_mirror_axis(1, _mirror_y_btn.button_pressed)
+	_editor.set_mirror_axis(2, _mirror_z_btn.button_pressed)
+	_mirror_offset_x.value = state.get("mirror_offset_x", 0)
+	_mirror_offset_y.value = state.get("mirror_offset_y", 0)
+	_mirror_offset_z.value = state.get("mirror_offset_z", 0)
+	_editor.set_mirror_offset(Vector3i(int(_mirror_offset_x.value), int(_mirror_offset_y.value), int(_mirror_offset_z.value)))
 
 
 func _find_camera_by_name(Name: String) -> Camera3D:
@@ -448,7 +483,11 @@ func _build_palette() -> void:
 		child.queue_free()
 
 	BlockCatalog.reload()
-	var palette_map = BlockCatalog.get_palette_map(BLOCK_PALETTE)
+	var palette_map := BlockCatalog.get_palette_map()
+
+	if palette_map.is_empty():
+		_status("No blocks imported. Use File → Import Assets.zip to load blocks.")
+		return
 
 	for cat_name in palette_map.keys():
 		var scroll := ScrollContainer.new()
@@ -467,7 +506,7 @@ func _build_palette() -> void:
 		_palette_tabs.set_tab_title(tab_idx, String(cat_name))
 
 		for bname in palette_map[cat_name]:
-			var btn := _create_block_button(String(bname), String(cat_name))
+			var btn := _create_block_button(String(bname))
 			grid.add_child(btn)
 			_palette_buttons.append(btn)
 
@@ -495,25 +534,53 @@ func _create_palette_nodes() -> void:
 	search.text_changed.connect(_filter_palette)
 
 
-func _create_block_button(bname: String, category: String = "") -> Button:
-	var btn: Button      = null
-	var custom_scene     = BlockCatalog.get_scene_for(bname)
+func _create_block_button(bname: String) -> Button:
+	var btn := Button.new()
+	var display_name := BlockCatalog.get_display_name(bname)
+	btn.text = display_name
+	btn.tooltip_text = "%s\nID: %s" % [display_name, bname]
+	btn.custom_minimum_size = Vector2(140, 36)
+	btn.clip_text = true
+	btn.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 
-	if custom_scene != null:
-		btn = custom_scene.instantiate() as Button
-	else:
-		var fallback_btn := BLOCK_BUTTON_SCENE.instantiate() as BlockPaletteButton
-		fallback_btn.configure_fallback(bname, category, _renderer.get_preview_color(bname))
-		btn = fallback_btn
+	# Set icon if available
+	var icon_tex := BlockCatalog.get_icon(bname)
+	if icon_tex != null:
+		btn.icon = icon_tex
+		btn.expand_icon = true
+		btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
 
-	if btn == null:
-		btn               = Button.new()
-		btn.text          = bname.replace("_", " ")
-		btn.tooltip_text  = bname
-		btn.custom_minimum_size = Vector2(140, 28)
+	# Apply style with block color
+	var color := BlockCatalog.get_fallback_color(bname)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.16, 0.16, 0.18, 1.0)
+	normal.border_color = color.lightened(0.10)
+	normal.border_width_left = 2
+	normal.border_width_top = 2
+	normal.border_width_right = 2
+	normal.border_width_bottom = 2
+	normal.corner_radius_top_left = 6
+	normal.corner_radius_top_right = 6
+	normal.corner_radius_bottom_right = 6
+	normal.corner_radius_bottom_left = 6
 
-	if btn is BlockPaletteButton:
-		(btn as BlockPaletteButton).refresh_visuals()
+	var hover := normal.duplicate()
+	hover.bg_color = normal.bg_color.lightened(0.10)
+	hover.border_color = color.lightened(0.25)
+
+	var pressed := normal.duplicate()
+	pressed.bg_color = color.darkened(0.25)
+	pressed.border_color = color.lightened(0.35)
+
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_color_override("font_color", Color.WHITE)
+	btn.add_theme_color_override("font_hover_color", Color.WHITE)
+	btn.add_theme_color_override("font_pressed_color", Color.WHITE)
+	btn.add_theme_font_size_override("font_size", 10)
 
 	btn.set_meta("block_name", bname)
 	btn.pressed.connect(_on_palette_button_pressed.bind(btn))
@@ -529,12 +596,9 @@ func _filter_palette(search_text: String) -> void:
 	var query := search_text.to_lower().strip_edges()
 
 	for btn in _palette_buttons:
-		var matches := true
-		if btn is BlockPaletteButton:
-			matches = (btn as BlockPaletteButton).matches_query(query)
-		else:
-			var bname := btn.get_meta("block_name") as String
-			matches = query.is_empty() or bname.to_lower().contains(query)
+		var bname := btn.get_meta("block_name") as String
+		var display_name := BlockCatalog.get_display_name(bname).to_lower()
+		var matches := query.is_empty() or bname.to_lower().contains(query) or display_name.contains(query)
 		btn.visible = matches
 
 	if not query.is_empty():
@@ -734,6 +798,8 @@ func _build_menus() -> void:
 	file_pm.add_separator()
 	file_pm.add_item("Import Prefab…", 13)
 	file_pm.add_item("Export Prefab…", 14)
+	file_pm.add_separator()
+	file_pm.add_item("Import Assets.zip…", 15)
 	file_pm.id_pressed.connect(_on_file_menu)
 
 	var view_pm := %MenuBar.get_node("View") as PopupMenu
@@ -832,6 +898,26 @@ func _connect_signals() -> void:
 		_status("Selection cleared.")
 	)
 
+	# Mirror
+	_mirror_x_btn.pressed.connect(func():
+		_editor.set_mirror_axis(0, _mirror_x_btn.button_pressed)
+		_update_mirror_status()
+	)
+	_mirror_y_btn.pressed.connect(func():
+		_editor.set_mirror_axis(1, _mirror_y_btn.button_pressed)
+		_update_mirror_status()
+	)
+	_mirror_z_btn.pressed.connect(func():
+		_editor.set_mirror_axis(2, _mirror_z_btn.button_pressed)
+		_update_mirror_status()
+	)
+	var _on_mirror_offset_changed = func(_val):
+		_editor.set_mirror_offset(Vector3i(int(_mirror_offset_x.value), int(_mirror_offset_y.value), int(_mirror_offset_z.value)))
+		_update_mirror_status()
+	_mirror_offset_x.value_changed.connect(_on_mirror_offset_changed)
+	_mirror_offset_y.value_changed.connect(_on_mirror_offset_changed)
+	_mirror_offset_z.value_changed.connect(_on_mirror_offset_changed)
+
 	# Palette
 	_palette_btn.pressed.connect(func(): _toggle_bottom())
 	_palette_search.text_changed.connect(_filter_palette)
@@ -881,6 +967,9 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif key.ctrl_pressed and key.shift_pressed and key.keycode == KEY_Z:
 		_do_redo()
+		get_viewport().set_input_as_handled()
+	elif key.ctrl_pressed and key.shift_pressed and key.keycode == KEY_X:
+		_toggle_mirror_all()
 		get_viewport().set_input_as_handled()
 
 
@@ -1070,6 +1159,8 @@ func _init_dialogs() -> void:
 		["*.json"], "Open Project", _on_open_selected)
 	_dlg_img    = _make_dlg(FileDialog.FILE_MODE_OPEN_FILE,
 		["*.png", "*.jpg,*.jpeg", "*.webp"], "Load Reference Image", _on_img_selected)
+	_dlg_assets_zip = _make_dlg(FileDialog.FILE_MODE_OPEN_FILE,
+		["*.zip"], "Import Hytale Assets.zip", _on_assets_zip_selected)
 
 
 func _make_dlg(mode: int, filters: Array, title: String, cb: Callable) -> FileDialog:
@@ -1197,6 +1288,7 @@ func _show_controls_dlg() -> void:
 • [b]H[/b] → Horizontal brush plane
 • [b]X[/b] → Vertical plane facing X
 • [b]Z[/b] → Vertical plane facing Z
+• [b]Ctrl + Shift + X[/b] → Toggle Mirror (all axes)
 
 [color=#ffcc77]─── Selection Tool ───[/color]
 • Shape: Rectangle, Circle, Box, Cylinder, Sphere, Pyramid
@@ -1205,6 +1297,14 @@ func _show_controls_dlg() -> void:
 • [b]Brush Height[/b] controls 3D shape height
 • [b]Border[/b] controls shell thickness
 • Press [b]Apply[/b] to execute
+
+[color=#ffcc77]─── Mirror (Symmetry) ───[/color]
+• Toggle [b]X[/b], [b]Y[/b], [b]Z[/b] axes to mirror painting/erasing
+• Multiple axes can be combined (X+Z = 4-way symmetry)
+• Mirror center = origin (0,0,0) by default
+• Use [b]Center[/b] offset fields to move the mirror plane
+• Works with Paint, Erase, and Selection tools
+• [b]Ctrl + Shift + X[/b] → Toggle all mirror axes
 
 [color=#ffcc77]─── Groups & Cameras ───[/color]
 • Right panel → Groups: Organize blocks
@@ -1277,6 +1377,12 @@ func _on_save_selected(path: String) -> void:
 	state_data["bottom_open"] = _bottom_open
 	state_data["active_tool"] = int(_active_tool)
 	state_data["cam_counter"] = _cam_counter
+	state_data["mirror_x"] = _mirror_x_btn.button_pressed
+	state_data["mirror_y"] = _mirror_y_btn.button_pressed
+	state_data["mirror_z"] = _mirror_z_btn.button_pressed
+	state_data["mirror_offset_x"] = int(_mirror_offset_x.value)
+	state_data["mirror_offset_y"] = int(_mirror_offset_y.value)
+	state_data["mirror_offset_z"] = int(_mirror_offset_z.value)
 
 	var err = ProjectManager.save(path, groups_data, cams_data, imgs_data, state_data)
 	if err == OK:
@@ -1356,6 +1462,112 @@ func _on_export_selected(path: String) -> void:
 		_status("✅ Exported: %s (%d blocks)" % [path.get_file(), _renderer.get_block_count()])
 	else:
 		_status("❌ Export error %d" % err)
+
+
+func _on_assets_zip_selected(path: String) -> void:
+	if _import_thread != null and _import_thread.is_started():
+		_status("⚠ Import already in progress.")
+		return
+	_show_import_overlay("Importing blocks from %s..." % path.get_file())
+	_start_import_thread(path)
+
+
+func _start_import_thread(path: String) -> void:
+	_importer = HytaleImporter.new()
+	_importer.import_finished.connect(_on_import_finished)
+	_importer.import_error.connect(_on_import_error)
+	_import_thread = Thread.new()
+	_import_thread.start(_import_thread_func.bind(path))
+
+
+func _import_thread_func(path: String) -> void:
+	var catalog := _importer.import_from_zip(path)
+	# Store result for main thread to pick up
+	_import_result = catalog
+
+
+var _import_result: Dictionary = {}
+
+
+func _process(_delta: float) -> void:
+	# Update import progress from shared variables (thread-safe)
+	if _importer != null and _import_label != null:
+		if _importer.progress_message != _import_label.text:
+			_import_label.text = _importer.progress_message
+
+	# Check import thread completion
+	if _import_thread != null and _import_thread.is_started() and not _import_thread.is_alive():
+		_import_thread.wait_to_finish()
+		_import_thread = null
+		var result := _import_result
+		_import_result = {}
+		if not result.is_empty():
+			# Save zip path before destroying the importer
+			var imported_zip_path := HytaleImporter._current_zip_path
+			BlockCatalog.clear()
+			for block_id in result:
+				BlockCatalog._register_block(result[block_id])
+			HytaleImporter.save_catalog(result)
+			# Set zip path for lazy resource loading
+			BlockCatalog.set_zip_path(imported_zip_path)
+			# Reopen zip so lazy loading works (importer will be destroyed)
+			HytaleImporter.reopen_zip()
+			_build_palette()
+			_status("✅ Imported %d blocks." % result.size())
+		_hide_import_overlay()
+		_importer = null
+
+	# Refresh occlusion culling roughly every 500 ms (not every frame)
+	if Time.get_ticks_msec() % 500 < 20:
+		_update_occlusion_culling()
+
+
+func _on_import_finished(_block_count: int) -> void:
+	# Result will be picked up in _process
+	pass
+
+
+func _on_import_error(message: String) -> void:
+	call_deferred("_show_import_error", message)
+
+
+func _show_import_error(message: String) -> void:
+	_hide_import_overlay()
+	_status("❌ Import error: %s" % message)
+
+
+func _show_import_overlay(message: String) -> void:
+	if _import_overlay != null:
+		_import_overlay.queue_free()
+	_import_overlay = Control.new()
+	_import_overlay.name = "ImportOverlay"
+	_import_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_import_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var bg := ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0, 0, 0, 0.6)
+	_import_overlay.add_child(bg)
+
+	_import_label = Label.new()
+	_import_label.set_anchors_preset(Control.PRESET_CENTER)
+	_import_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_import_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_import_label.text = message
+	_import_label.add_theme_font_size_override("font_size", 18)
+	_import_label.add_theme_color_override("font_color", Color.WHITE)
+	_import_label.custom_minimum_size = Vector2(500, 40)
+	_import_overlay.add_child(_import_label)
+
+	add_child(_import_overlay)
+	_import_overlay.move_to_front()
+
+
+func _hide_import_overlay() -> void:
+	if _import_overlay != null:
+		_import_overlay.queue_free()
+		_import_overlay = null
+		_import_label = null
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1546,6 +1758,33 @@ func _status(msg: String) -> void:
 		_status_lbl.text = "  " + msg
 
 
+func _update_mirror_status() -> void:
+	var axes := _editor.get_mirror_axes()
+	var offset := _editor.get_mirror_offset()
+	if axes == Vector3i.ZERO:
+		_status("Mirror: OFF")
+	else:
+		var labels := []
+		if axes.x: labels.append("X")
+		if axes.y: labels.append("Y")
+		if axes.z: labels.append("Z")
+		var offset_str := ""
+		if offset != Vector3i.ZERO:
+			offset_str = " (%d,%d,%d)" % [offset.x, offset.y, offset.z]
+		_status("Mirror: %s%s" % [" ".join(labels), offset_str])
+
+
+func _toggle_mirror_all() -> void:
+	var any_active := _editor.is_mirror_active()
+	_mirror_x_btn.button_pressed = not any_active
+	_mirror_y_btn.button_pressed = not any_active
+	_mirror_z_btn.button_pressed = not any_active
+	_editor.set_mirror_axis(0, not any_active)
+	_editor.set_mirror_axis(1, not any_active)
+	_editor.set_mirror_axis(2, not any_active)
+	_update_mirror_status()
+
+
 func _on_copy_block() -> void:
 	if _copy_block_mode:
 		_copy_block_mode             = false
@@ -1609,10 +1848,3 @@ func _update_occlusion_culling() -> void:
 		# Within range — restore user-intended visibility for every group
 		for gn in _renderer.get_group_names():
 			_renderer.set_group_visible(gn, _user_group_visibility.get(gn, true))
-
-
-@warning_ignore("unused_parameter")
-func _process(delta: float) -> void:
-	# Refresh occlusion culling roughly every 500 ms (not every frame)
-	if Time.get_ticks_msec() % 500 < 20:
-		_update_occlusion_culling()

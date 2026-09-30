@@ -30,29 +30,6 @@ var _rebuild_scheduled : bool = false
 var _bulk_edit_depth   : int = 0
 var _needs_change_emit : bool = false
 
-# ── Categories for auto-color (19 categories, cleaned) ───────────────────────
-const _CATEGORIES : Array = [
-	["Beams",              Color(0.65, 0.52, 0.38)],  # (11)
-	["Bone",               Color(0.75, 0.75, 0.75)],  # (3)
-	["Build_Black_Cube",   Color(0.60, 0.70, 0.75)],  # (58)
-	["Clay",               Color(0.72, 0.45, 0.35)],  # (19)
-	["Cloth_Block_Wool",   Color(0.85, 0.48, 0.65)],  # (60)
-	["Deco_Iron_Bars",     Color(0.75, 0.75, 0.75)],  # (4)
-	["Dirt",               Color(0.52, 0.36, 0.20)],  # (17)
-	["Fluid_Lava",         Color(0.85, 0.40, 0.10)],  # (6)
-	["Metal_Iron",         Color(0.72, 0.74, 0.78)],  # (80)
-	["Ore_Iron_Basalt",    Color(0.68, 0.55, 0.48)],  # (14)
-	["Planks",             Color(0.62, 0.42, 0.22)],  # (11)
-	["Rock_Stone_Brick",   Color(0.55, 0.55, 0.58)],  # (608)
-	["Rubble_Stone",       Color(0.52, 0.50, 0.48)],  # (32)
-	["Sand",               Color(0.90, 0.82, 0.55)],  # (19)
-	["Snow",               Color(0.92, 0.94, 0.98)],  # (14)
-	["Soil",               Color(0.28, 0.62, 0.22)],  # (128)
-	["Wood",               Color(0.62, 0.42, 0.22)],  # (356)
-	["Wood Dec",           Color(0.65, 0.52, 0.38)],  # (11)
-	["Wood Orn",           Color(0.75, 0.62, 0.42)],  # (11)
-]
-
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -302,40 +279,35 @@ func _get_render_mesh(bname: String) -> Mesh:
 	if _render_mesh_cache.has(bname):
 		return _render_mesh_cache[bname] as Mesh
 	
-	var block_def := BlockCatalog.get_definition(bname)
-	if block_def.is_empty():
-		print("No definition for ", bname)
-		return null
+	# Try custom mesh from catalog first (blocks with .blockymodel)
+	var custom_mesh := BlockCatalog.get_custom_mesh(bname)
+	if custom_mesh != null:
+		var dup_mesh := custom_mesh.duplicate(true)
+		var dup_mat := _build_block_material(bname)
+		_apply_material_to_mesh(dup_mesh, dup_mat)
+		_render_mesh_cache[bname] = dup_mesh
+		return dup_mesh
 	
-	var mesh := block_def.get("custom_mesh", null) as Mesh
-	if mesh != null:
-		mesh = mesh.duplicate(true)
-	else:
-		# Create custom cube mesh with proper UVs for full texture per face
-		mesh = _create_cube_mesh_with_full_uvs()
-	
-	var material := _build_block_material(block_def, _get_color(bname))
+	# Fallback: standard cube mesh
+	var mesh := _create_cube_mesh_with_full_uvs()
+	var material := _build_block_material(bname)
 	_apply_material_to_mesh(mesh, material)
 	_render_mesh_cache[bname] = mesh
 	return mesh
 
 
-func _build_block_material(block_def: Dictionary, base_color: Color) -> Material:
+func _build_block_material(bname: String) -> Material:
 	var mat := StandardMaterial3D.new()
-	var albedo := block_def.get("fallback_color", base_color) as Color
-	mat.albedo_color = albedo
-	mat.roughness = 0.75
-	mat.metallic = 0.05
+	var fallback_color := BlockCatalog.get_fallback_color(bname)
+	mat.albedo_color = fallback_color
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED  # Disable culling to show both sides
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	
-	var tex := block_def.get("albedo_texture", null) as Texture2D
-	print("Texture for ", block_def.get("block_id", "unknown"), ": ", tex != null)
+	var tex := BlockCatalog.get_texture(bname)
 	if tex != null:
 		mat.albedo_texture = tex
-	
-	if albedo.a < 1.0:
-		mat.transparency = StandardMaterial3D.TRANSPARENCY_ALPHA
 	
 	return mat
 
@@ -499,13 +471,4 @@ func _key(x: int, y: int, z: int) -> String:
 
 
 func _get_color(bname: String) -> Color:
-	var low := bname.to_lower()
-	for e in _CATEGORIES:
-		if low.contains(e[0].to_lower()):
-			return e[1]
-	var h := bname.hash()
-	return Color(
-		0.35 + (h & 0xFF) / 510.0,
-		0.35 + ((h >> 8) & 0xFF) / 510.0,
-		0.35 + ((h >> 16) & 0xFF) / 510.0
-	)
+	return BlockCatalog.get_fallback_color(bname)

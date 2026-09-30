@@ -30,6 +30,12 @@ var sel_action     : SelAction  = SelAction.PAINT
 var sel_fill       : bool       = true
 var sel_border_thickness : int  = 1
 
+# Mirror
+var _mirror_enabled : bool = false
+var _mirror_x : bool = false
+var _mirror_y : bool = false
+var _mirror_z : bool = false
+
 signal action_performed()
 signal preview_moved(grid_pos: Vector3i)
 
@@ -54,6 +60,7 @@ var _sel_end     : Vector3i   = Vector3i.ZERO
 var _preview_root : Node3D
 var _sel_preview  : MeshInstance3D
 var _hover_preview: MeshInstance3D
+var _mirror_preview: MeshInstance3D
 
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
@@ -104,6 +111,19 @@ func _build_previews(world: Node3D) -> void:
 	_sel_preview.visible = false
 	_preview_root.add_child(_sel_preview)
 
+	# Mirror cursor preview (magenta semi-transparent cube)
+	var mmat := StandardMaterial3D.new()
+	mmat.albedo_color = Color(1.0, 0.2, 0.8, 0.35)
+	mmat.transparency = StandardMaterial3D.TRANSPARENCY_ALPHA
+	mmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var mbox := BoxMesh.new()
+	mbox.size = Vector3.ONE * 1.03
+	mbox.material = mmat
+	_mirror_preview = MeshInstance3D.new()
+	_mirror_preview.mesh = mbox
+	_mirror_preview.visible = false
+	_preview_root.add_child(_mirror_preview)
+
 
 # ── Input handlers (called from main.gd) ─────────────────────────────────────
 
@@ -112,6 +132,7 @@ func handle_hover(mouse_local: Vector2) -> void:
 		Tool.PAINT, Tool.ERASE:
 			var gpos := _ray_to_grid(mouse_local)
 			_update_hover_preview(gpos)
+			_update_mirror_preview(gpos)
 			preview_moved.emit(gpos)
 			if _is_pressing and gpos != _last_painted:
 				_apply_brush(gpos)
@@ -122,8 +143,10 @@ func handle_hover(mouse_local: Vector2) -> void:
 				_update_sel_preview()
 			else:
 				_hover_preview.visible = false
+				_mirror_preview.visible = false
 		_:
 			_hover_preview.visible = false
+			_mirror_preview.visible = false
 
 
 func handle_press(mouse_local: Vector2) -> void:
@@ -154,6 +177,7 @@ func handle_exit() -> void:
 		_finish_stroke()
 	_sel_drag    = false
 	_hover_preview.visible = false
+	_mirror_preview.visible = false
 
 
 # ── Public setters ────────────────────────────────────────────────────────────
@@ -162,6 +186,7 @@ func set_tool(t: Tool) -> void:
 	current_tool = t
 	_is_pressing = false
 	_hover_preview.visible = false
+	_mirror_preview.visible = false
 	if t != Tool.SHAPE_SELECT:
 		_sel_preview.visible = false
 		_sel_active = false
@@ -198,6 +223,104 @@ func set_sel_border_thickness(t: int) -> void:
 		_update_sel_preview()
 
 
+# ── Mirror ──────────────────────────────────────────────────────────────────
+
+func set_mirror_axis(axis: int, enabled: bool) -> void:
+	match axis:
+		0: _mirror_x = enabled
+		1: _mirror_y = enabled
+		2: _mirror_z = enabled
+	_mirror_enabled = _mirror_x or _mirror_y or _mirror_z
+	if not _mirror_enabled:
+		_mirror_preview.visible = false
+
+
+func toggle_mirror() -> void:
+	_mirror_enabled = not _mirror_enabled
+	if not _mirror_enabled:
+		_mirror_x = false
+		_mirror_y = false
+		_mirror_z = false
+		_mirror_preview.visible = false
+
+
+func is_mirror_active() -> bool:
+	return _mirror_enabled
+
+
+func get_mirror_axes() -> Vector3i:
+	return Vector3i(int(_mirror_x), int(_mirror_y), int(_mirror_z))
+
+
+var _mirror_offset : Vector3i = Vector3i.ZERO
+
+
+func set_mirror_offset(offset: Vector3i) -> void:
+	_mirror_offset = offset
+
+
+func get_mirror_offset() -> Vector3i:
+	return _mirror_offset
+
+
+func _get_mirror_center() -> Vector3:
+	return Vector3(_mirror_offset)
+
+
+func _get_mirrored_positions(positions: Array) -> Array:
+	if not _mirror_enabled:
+		return []
+	var center := _get_mirror_center()
+	var result: Array = []
+	for pos in positions:
+		# Generate all axis combinations (excluding no-mirror)
+		var axes_active := []
+		if _mirror_x: axes_active.append(0)
+		if _mirror_y: axes_active.append(1)
+		if _mirror_z: axes_active.append(2)
+		var n := axes_active.size()
+		# Iterate subsets from size 1 to n
+		for mask in range(1, 1 << n):
+			var mp: Vector3i = pos
+			for bit in range(n):
+				if mask & (1 << bit):
+					match axes_active[bit]:
+						0: mp = Vector3i(2 * int(center.x) - mp.x, mp.y, mp.z)
+						1: mp = Vector3i(mp.x, 2 * int(center.y) - mp.y, mp.z)
+						2: mp = Vector3i(mp.x, mp.y, 2 * int(center.z) - mp.z)
+			if mp != pos and mp not in result:
+				result.append(mp)
+	return result
+
+
+func _update_mirror_preview(pos: Vector3i) -> void:
+	if not _mirror_enabled:
+		_mirror_preview.visible = false
+		return
+	var center := _get_mirror_center()
+	var axes_active := []
+	if _mirror_x: axes_active.append(0)
+	if _mirror_y: axes_active.append(1)
+	if _mirror_z: axes_active.append(2)
+	var n := axes_active.size()
+	if n == 0:
+		_mirror_preview.visible = false
+		return
+	# Show preview for first combination
+	var mp: Vector3i = pos
+	for bit in range(n):
+		match axes_active[bit]:
+			0: mp = Vector3i(2 * int(center.x) - mp.x, mp.y, mp.z)
+			1: mp = Vector3i(mp.x, 2 * int(center.y) - mp.y, mp.z)
+			2: mp = Vector3i(mp.x, mp.y, 2 * int(center.z) - mp.z)
+	if mp == pos:
+		_mirror_preview.visible = false
+		return
+	_mirror_preview.visible = true
+	_mirror_preview.position = Vector3(mp) + Vector3.ONE * 0.5
+	(_mirror_preview.mesh as BoxMesh).size = Vector3.ONE * 1.03
+
+
 ## Apply current block to the active selection, then clear it.
 func apply_selection() -> void:
 	if not _sel_active:
@@ -207,6 +330,13 @@ func apply_selection() -> void:
 	var erase_selection := (sel_action == SelAction.ERASE)
 	_renderer.begin_bulk_edit()
 	for pos in positions:
+		if erase_selection:
+			changed = _renderer.remove_block(pos) or changed
+		else:
+			changed = _renderer.add_block(pos, current_block, active_group) or changed
+	# Apply mirror to selection
+	var mirrored := _get_mirrored_positions(positions)
+	for pos in mirrored:
 		if erase_selection:
 			changed = _renderer.remove_block(pos) or changed
 		else:
@@ -244,6 +374,14 @@ func _apply_brush(center: Vector3i) -> void:
 	var positions := _get_brush_positions(center)
 	var changed := false
 	for pos in positions:
+		match current_tool:
+			Tool.PAINT:
+				changed = _renderer.add_block(pos, current_block, active_group) or changed
+			Tool.ERASE:
+				changed = _renderer.remove_block(pos) or changed
+	# Apply mirror
+	var mirrored := _get_mirrored_positions(positions)
+	for pos in mirrored:
 		match current_tool:
 			Tool.PAINT:
 				changed = _renderer.add_block(pos, current_block, active_group) or changed
