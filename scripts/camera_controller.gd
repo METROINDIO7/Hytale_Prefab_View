@@ -22,6 +22,7 @@ var _orbiting     : bool    = false
 var _last_mouse   : Vector2 = Vector2.ZERO
 var _cam_distance : float   = 22.0
 var _pitch_deg    : float   = -52.0
+var max_cam_distance : float = 150.0
 
 # Track navigation state per camera
 var _cam_states : Dictionary = {}  # cam_name → {position, rotation, distance, pitch}
@@ -37,6 +38,7 @@ func _ready() -> void:
 	_aerial_cam = Camera3D.new()
 	_aerial_cam.name = "AerialCamera"
 	_aerial_cam.fov  = 60.0
+	_aerial_cam.far  = maxf(4000.0, max_cam_distance * 4.0)
 	_pivot.add_child(_aerial_cam)
 	_apply_orbit()
 	_aerial_cam.make_current()
@@ -55,6 +57,7 @@ func initialize_ref_camera_from_saved(cam: Camera3D, Transform: Transform3D) -> 
 	if cam == null or not is_instance_valid(cam):
 		return
 	cam.global_transform = Transform
+	cam.far = maxf(4000.0, max_cam_distance * 4.0)
 	# Extract pitch from the saved basis so orbit/rotation is preserved correctly
 	var pitch_deg := Transform.basis.get_euler().x * (180.0 / PI)
 	_cam_states[cam.name] = {
@@ -161,6 +164,7 @@ func add_reference_camera(cam_name: String, copy_aerial: bool = true) -> Camera3
 	var cam := Camera3D.new()
 	cam.name = cam_name
 	cam.fov = 60.0
+	cam.far = maxf(4000.0, max_cam_distance * 4.0)
 	
 	if copy_aerial:
 		cam.global_transform = _aerial_cam.global_transform
@@ -273,19 +277,33 @@ func _restore_cam_state(cam: Camera3D) -> void:
 	var state := _get_cam_state(cam)
 	if cam == _aerial_cam:
 		_pivot.global_position = state.pivot_pos
-		_cam_distance = state.distance
+		_cam_distance = clampf(state.distance, 2.0, max_cam_distance)
 		_pitch_deg = state.pitch
 		_apply_orbit()
 	else:
 		cam.global_position = state.pivot_pos
-		_cam_distance = state.distance
+		_cam_distance = clampf(state.distance, 2.0, max_cam_distance)
 		cam.rotation_degrees.x = state.pitch
 
 
 # ── Internal ──────────────────────────────────────────────────────────────────
 
+func set_max_zoom(value: float) -> void:
+	max_cam_distance = clampf(value, 4.0, 100000.0)
+	_cam_distance = minf(_cam_distance, max_cam_distance)
+	if _aerial_cam:
+		_aerial_cam.far = maxf(4000.0, max_cam_distance * 4.0)
+	for cam in _ref_cameras:
+		if is_instance_valid(cam):
+			cam.far = maxf(4000.0, max_cam_distance * 4.0)
+	_apply_orbit()
+	if _active_cam:
+		var state := _get_cam_state(_active_cam)
+		state.distance = _cam_distance
+
+
 func _zoom(amount: float) -> void:
-	_cam_distance = clampf(_cam_distance + amount, 2.0, 150.0)
+	_cam_distance = clampf(_cam_distance + amount, 2.0, max_cam_distance)
 	_apply_orbit()
 	
 	# Update state for active camera

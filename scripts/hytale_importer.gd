@@ -9,6 +9,7 @@ const COMMON_PREFIX := "Common/"
 const CACHE_DIR := "user://imported_blocks/"
 const CACHE_FILE := "catalog.json"
 const INDEX_FILE := "index.json"
+const MANIFEST_FILE := "manifest.json"
 const ASSETS_DIR := "user://imported_blocks/assets/"
 const ICONS_DIR := "user://imported_blocks/assets/icons/"
 const TEXTURES_DIR := "user://imported_blocks/assets/textures/"
@@ -22,40 +23,65 @@ var progress_message: String = ""
 var progress_current: int = 0
 var progress_total: int = 0
 
-# Path of the currently loaded zip (for lazy resource loading)
+# Path of the currently loaded zip (for lazy resource loading, main thread only)
 static var _current_zip_path: String = ""
 static var _current_zip: ZIPReader = null
+static var _opened_zip_path: String = ""
+static var _current_zip_version: String = ""
+static var _cached_catalog_version: String = ""
+
+# Runtime resource caches (shared by blocks that use the same source asset)
+static var _icon_cache: Dictionary = {}
+static var _texture_cache: Dictionary = {}
+static var _model_cache: Dictionary = {}
 
 
 ## Main entry point: imports blocks from a zip file.
 func import_from_zip(zip_path: String) -> Dictionary:
-	_current_zip_path = zip_path
-	if _current_zip != null:
-		_current_zip.close()
-	_current_zip = ZIPReader.new()
-	var err := _current_zip.open(zip_path)
+	# The import thread uses its own ZIPReader; the static one is reserved for
+	# lazy loading on the main thread so both never race on the same handle.
+	var zip := ZIPReader.new()
+	var err := zip.open(zip_path)
 	if err != OK:
 		push_error("[HytaleImporter] Cannot open zip: " + zip_path)
 		import_error.emit("Cannot open zip: " + zip_path)
 		return {}
+
+	var all_files := zip.get_files()
+	var file_set := {}
+	for f in all_files:
+		file_set[str(f).replace("\\", "/")] = true
+	var version := _compute_zip_version(zip_path, all_files.size())
+	_current_zip_path = zip_path
+	_current_zip_version = version
+
+	# Fast path: the catalog and extracted assets already match this exact zip.
+	if _manifest_matches(version):
+		var cached := load_cached_catalog()
+		if not cached.is_empty() and _cached_catalog_version == version:
+			progress_message = "Using cached import..."
+			print("[HytaleImporter] Reusing cached catalog for ", zip_path)
+			zip.close()
+			import_finished.emit(cached.size())
+			return cached
 
 	# Phase 1: Fast index — just collect file paths, no JSON parsing
 	progress_message = "Indexing zip..."
 
 	# Try loading cached index first (avoids re-scanning the zip)
 	var item_files: Array[String] = []
-	var cached_index := load_index()
+	var cached_index := load_index(version)
 	if not cached_index.is_empty():
 		item_files = cached_index
 		print("[HytaleImporter] Using cached index: ", item_files.size(), " files")
 	else:
-		item_files = _index_json_files(_current_zip)
+		item_files = _index_json_files(all_files)
 		print("[HytaleImporter] JSON files in ", ITEMS_DIR, ": ", item_files.size())
-		_save_index(item_files)
+		_save_index(item_files, version)
 
 	if item_files.is_empty():
 		import_error.emit("No JSON files found at '%s'" % ITEMS_DIR)
-		_current_zip.close()
+		zip.close()
 		return {}
 
 	# Phase 2: Parse JSONs (no texture/model loading — that's lazy now)
@@ -65,12 +91,12 @@ func import_from_zip(zip_path: String) -> Dictionary:
 
 	for i in range(item_files.size()):
 		var fpath: String = item_files[i]
+		progress_current = i + 1
 		if i % 50 == 0:
-			progress_current = i
-			progress_message = "Parsing block %d/%d..." % [i, item_files.size()]
+			progress_message = "Parsing block %d/%d..." % [i + 1, item_files.size()]
 
 		var block_id := fpath.get_file().get_basename()
-		var json_data: Variant = _read_json_from_zip(_current_zip, fpath)
+		var json_data: Variant = _read_json_from_zip_checked(zip, fpath, file_set)
 		if json_data == null or not (json_data is Dictionary):
 			continue
 
@@ -89,70 +115,231 @@ func import_from_zip(zip_path: String) -> Dictionary:
 
 	# Phase 3: Extract assets to disk for persistence across sessions
 	progress_message = "Extracting assets to disk..."
-	_extract_assets_to_disk(catalog)
+	_extract_assets_to_disk(catalog, zip, file_set, version)
 
+	zip.close()
 	progress_message = "Done!"
 	import_finished.emit(catalog.size())
 	return catalog
 
 
 ## Extracts icons, textures and models from zip to disk for persistence.
-func _extract_assets_to_disk(catalog: Dictionary) -> void:
+## Assets are content-addressed by source path + zip version, so files shared by
+## many blocks are written only once and never served from a stale zip.
+func _extract_assets_to_disk(catalog: Dictionary, zip: ZIPReader,
+		file_set: Dictionary, version: String) -> void:
 	DirAccess.make_dir_recursive_absolute(ICONS_DIR)
 	DirAccess.make_dir_recursive_absolute(TEXTURES_DIR)
 	DirAccess.make_dir_recursive_absolute(MODELS_DIR)
 
+	var icon_cache := {}
+	var texture_cache := {}
+	var model_cache := {}
+	var written := {
+		ICONS_DIR: {},
+		TEXTURES_DIR: {},
+		MODELS_DIR: {},
+	}
+
 	var total := catalog.size()
+	progress_total = total
+	progress_current = 0
 	var idx := 0
 	for block_id in catalog:
 		idx += 1
+		progress_current = idx
 		if idx % 20 == 0:
-			progress_current = idx
 			progress_message = "Extracting assets %d/%d..." % [idx, total]
 
 		var entry: Dictionary = catalog[block_id]
 
-		# Extract icon
+		# Icons
 		var icon_path: String = str(entry.get("icon_path", ""))
 		if not icon_path.is_empty():
-			_extract_file_from_zip(COMMON_PREFIX + icon_path, ICONS_DIR + block_id + ".png")
+			var r := _extract_asset(zip, file_set, icon_path, ICONS_DIR,
+					_asset_ext(icon_path, "png"), version, icon_cache, written)
+			if bool(r.get("ok", false)):
+				entry["icon_file"] = str(r.get("file", ""))
 
-		# Extract texture
-		var tex_path: String = str(entry.get("texture_path", ""))
-		if not tex_path.is_empty():
-			_extract_file_from_zip(COMMON_PREFIX + tex_path, TEXTURES_DIR + block_id + ".png")
+		# Block/cube textures (All / Sides / UpDown / Up / Down)
+		var tex_keys := [
+			"texture_path", "texture_all_path", "texture_sides_path",
+			"texture_updown_path", "texture_up_path", "texture_down_path",
+			"texture_north_path", "texture_south_path", "texture_east_path",
+			"texture_west_path",
+		]
+		for key in tex_keys:
+			var src: String = str(entry.get(key, ""))
+			if src.is_empty():
+				continue
+			var r := _extract_asset(zip, file_set, src, TEXTURES_DIR,
+					_asset_ext(src, "png"), version, texture_cache, written)
+			if bool(r.get("ok", false)):
+				entry[str(key).replace("_path", "_file")] = str(r.get("file", ""))
 
-		# Extract custom model
+		# Custom model texture (atlas used by the model, not the cube texture)
+		var model_tex_path: String = str(entry.get("custom_model_texture_path", ""))
+		var atlas_path := model_tex_path
+		if not model_tex_path.is_empty():
+			var r := _extract_asset(zip, file_set, model_tex_path, TEXTURES_DIR,
+					_asset_ext(model_tex_path, "png"), version, texture_cache, written)
+			if bool(r.get("ok", false)):
+				entry["model_texture_file"] = str(r.get("file", ""))
+		elif not entry.get("texture_file", "").is_empty():
+			entry["model_texture_file"] = entry["texture_file"]
+		if atlas_path.is_empty():
+			atlas_path = str(entry.get("texture_path", ""))
+
+		# Custom model
 		var model_path: String = str(entry.get("custom_model_path", ""))
 		if not model_path.is_empty():
-			_extract_file_from_zip(COMMON_PREFIX + model_path, MODELS_DIR + block_id + ".json")
-			# Detect atlas size for custom models (only once, during import)
-			if not tex_path.is_empty():
-				var img := Image.new()
-				img.load(TEXTURES_DIR + block_id + ".png")
-				if img.get_width() > 0 and img.get_height() > 0:
-					entry["atlas_size"] = Vector2i(img.get_width(), img.get_height())
+			var r := _extract_asset(zip, file_set, model_path, MODELS_DIR, "json",
+					version, model_cache, written)
+			if bool(r.get("ok", false)):
+				entry["model_file"] = str(r.get("file", ""))
+
+		# Atlas size must come from the model texture, otherwise UVs are wrong.
+		if not atlas_path.is_empty() and texture_cache.has(atlas_path):
+			var atlas_size: Vector2i = texture_cache[atlas_path].get("size", Vector2i.ZERO)
+			if atlas_size.x > 0 and atlas_size.y > 0:
+				entry["atlas_size"] = atlas_size
+
+	# Remove files left over from previous zip versions / old cache layouts.
+	var kept_icons: Dictionary = written[ICONS_DIR]
+	var kept_textures: Dictionary = written[TEXTURES_DIR]
+	var kept_models: Dictionary = written[MODELS_DIR]
+	_cleanup_orphans(ICONS_DIR, kept_icons)
+	_cleanup_orphans(TEXTURES_DIR, kept_textures)
+	_cleanup_orphans(MODELS_DIR, kept_models)
+	_write_manifest(version)
 
 
-## Extracts a single file from zip to a destination path on disk.
-func _extract_file_from_zip(zip_path: String, dest_path: String) -> void:
-	if _current_zip == null or not _current_zip.file_exists(zip_path):
+## Copies one asset from the zip to disk unless that exact version already
+## exists. Returns {"file": <name>, "size": Vector2i, "ok": bool}.
+static func _extract_asset(zip: ZIPReader, file_set: Dictionary, source_path: String,
+		dest_dir: String, ext: String, version: String, cache: Dictionary,
+		written: Dictionary) -> Dictionary:
+	if cache.has(source_path):
+		return cache[source_path]
+	var result := {"file": "", "size": Vector2i.ZERO, "ok": false}
+	var full := COMMON_PREFIX + source_path.replace("\\", "/")
+	if zip != null and file_set.has(full):
+		var bytes := zip.read_file(full)
+		if bytes != null and bytes.size() > 0:
+			var fname := _asset_file_name(source_path, ext, version)
+			var dest := dest_dir + fname
+			DirAccess.make_dir_recursive_absolute(dest_dir)
+			if not FileAccess.file_exists(dest):
+				var f := FileAccess.open(dest, FileAccess.WRITE)
+				if f != null:
+					f.store_buffer(bytes)
+					f.close()
+			result["file"] = fname
+			result["ok"] = true
+			if ext == "png" or ext == "jpg" or ext == "jpeg" or ext == "webp":
+				result["size"] = _image_size_from_bytes(bytes)
+			var dir_set: Dictionary = written.get(dest_dir, {})
+			dir_set[fname] = true
+			written[dest_dir] = dir_set
+	cache[source_path] = result
+	return result
+
+
+static func _asset_file_name(source_path: String, ext: String, version: String) -> String:
+	return (version + "|" + source_path).md5_text() + "." + ext
+
+
+static func _asset_ext(source_path: String, fallback: String) -> String:
+	var ext := source_path.get_extension().to_lower()
+	if ext == "png" or ext == "jpg" or ext == "jpeg" or ext == "webp":
+		return ext
+	return fallback
+
+
+## Reads PNG dimensions straight from the header (avoid decoding thousands of
+## images just to know their size).
+static func _image_size_from_bytes(bytes: PackedByteArray) -> Vector2i:
+	if bytes.size() >= 24 and bytes[0] == 0x89 and bytes[1] == 0x50 \
+			and bytes[2] == 0x4E and bytes[3] == 0x47:
+		var w := int(bytes[16]) * 16777216 + int(bytes[17]) * 65536 \
+				+ int(bytes[18]) * 256 + int(bytes[19])
+		var h := int(bytes[20]) * 16777216 + int(bytes[21]) * 65536 \
+				+ int(bytes[22]) * 256 + int(bytes[23])
+		if w > 0 and h > 0:
+			return Vector2i(w, h)
+	var img := Image.new()
+	if img.load_png_from_buffer(bytes) == OK:
+		return img.get_size()
+	if img.load_jpg_from_buffer(bytes) == OK:
+		return img.get_size()
+	if img.load_webp_from_buffer(bytes) == OK:
+		return img.get_size()
+	return Vector2i.ZERO
+
+
+static func _cleanup_orphans(dir_path: String, keep: Dictionary) -> void:
+	var da := DirAccess.open(dir_path)
+	if da == null:
 		return
-	var bytes := _current_zip.read_file(zip_path)
-	if bytes == null or bytes.size() == 0:
-		return
-	DirAccess.make_dir_recursive_absolute(dest_path.get_base_dir())
-	var f := FileAccess.open(dest_path, FileAccess.WRITE)
+	var remove_list: Array[String] = []
+	da.list_dir_begin()
+	var fname := da.get_next()
+	while not fname.is_empty():
+		if not da.current_is_dir() and not keep.has(fname):
+			remove_list.append(fname)
+		fname = da.get_next()
+	da.list_dir_end()
+	for name in remove_list:
+		da.remove(name)
+
+
+static func _compute_zip_version(zip_path: String, file_count: int) -> String:
+	var size := 0
+	var f := FileAccess.open(zip_path, FileAccess.READ)
+	if f != null:
+		size = f.get_length()
+		f.close()
+	var mtime := FileAccess.get_modified_time(zip_path)
+	return "%s|%d|%d|%d" % [zip_path.get_file(), size, mtime, file_count]
+
+
+static func _manifest_matches(version: String) -> bool:
+	var path := ASSETS_DIR + MANIFEST_FILE
+	if not FileAccess.file_exists(path):
+		return false
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return false
+	var text := f.get_as_text()
+	f.close()
+	var json := JSON.new()
+	if json.parse(text) != OK:
+		return false
+	var data: Variant = json.get_data()
+	if not (data is Dictionary):
+		return false
+	return str((data as Dictionary).get("version", "")) == version
+
+
+static func _write_manifest(version: String) -> void:
+	DirAccess.make_dir_recursive_absolute(ASSETS_DIR)
+	var f := FileAccess.open(ASSETS_DIR + MANIFEST_FILE, FileAccess.WRITE)
 	if f == null:
 		return
-	f.store_buffer(bytes)
+	f.store_string(JSON.stringify({"version": version}))
 	f.close()
 
 
+## Drops cached resources so the next lazy load uses the new zip contents.
+static func clear_runtime_caches() -> void:
+	_icon_cache.clear()
+	_texture_cache.clear()
+	_model_cache.clear()
+
+
 ## Fast index: returns list of JSON paths under ITEMS_DIR without parsing them.
-func _index_json_files(zip: ZIPReader) -> Array[String]:
+func _index_json_files(files: PackedStringArray) -> Array[String]:
 	var result: Array[String] = []
-	var files := zip.get_files()
 	var prefix := ITEMS_DIR.to_lower()
 	for f in files:
 		var fl := f.replace("\\", "/")
@@ -162,18 +349,18 @@ func _index_json_files(zip: ZIPReader) -> Array[String]:
 
 
 ## Saves the index to disk for reuse (avoids re-scanning the zip).
-static func _save_index(item_files: Array[String]) -> void:
+static func _save_index(item_files: Array[String], version: String) -> void:
 	DirAccess.make_dir_recursive_absolute(CACHE_DIR)
 	var f := FileAccess.open(CACHE_DIR + INDEX_FILE, FileAccess.WRITE)
 	if f == null:
 		return
-	var json := JSON.stringify({"files": item_files})
+	var json := JSON.stringify({"version": version, "files": item_files})
 	f.store_string(json)
 	f.close()
 
 
-## Loads a saved index from disk.
-static func load_index() -> Array[String]:
+## Loads a saved index from disk, only if it belongs to the same zip version.
+static func load_index(version: String = "") -> Array[String]:
 	var path := CACHE_DIR + INDEX_FILE
 	if not FileAccess.file_exists(path):
 		return []
@@ -189,6 +376,8 @@ static func load_index() -> Array[String]:
 	if not (data is Dictionary):
 		return []
 	var d: Dictionary = data as Dictionary
+	if str(d.get("version", "")) != version:
+		return []
 	var arr: Array = d.get("files", [])
 	var result: Array[String] = []
 	for s in arr:
@@ -198,60 +387,132 @@ static func load_index() -> Array[String]:
 
 ## Parses a single block JSON into a catalog entry (no resource loading).
 static func _parse_block(block_id: String, data: Dictionary) -> Dictionary:
-	var bt: Dictionary = data.get("BlockType", {})
+	var bt_v: Variant = data.get("BlockType", null)
+	if not (bt_v is Dictionary):
+		return {}
+	var bt: Dictionary = bt_v as Dictionary
 	if bt.is_empty():
 		return {}
+
+	# Base data can live at the top level (single-state blocks) or inside
+	# BlockType.State.Definitions.Block (multi-state / variant blocks). Merge
+	# the defaults so DrawType, Textures and Material are not silently lost.
+	var def: Dictionary = bt.duplicate(true)
+	var state_v: Variant = def.get("State", null)
+	if state_v is Dictionary:
+		var defs_v: Variant = (state_v as Dictionary).get("Definitions", null)
+		if defs_v is Dictionary:
+			var defs: Dictionary = defs_v as Dictionary
+			var base_v: Variant = defs.get("Block", null)
+			if base_v is Dictionary:
+				var base: Dictionary = base_v as Dictionary
+				for key in base:
+					if not def.has(key) or def[key] == null:
+						def[key] = base[key]
+			elif not def.has("DrawType") and not str(def.get("CustomModel", "")).is_empty():
+				# Variant-only block (roofs, doors...): its default is a model.
+				def["DrawType"] = "Model"
 
 	var info := {}
 	info["id"] = block_id
 	info["display_name"] = block_id
 	info["icon_path"] = str(data.get("Icon", ""))
-	info["draw_type"] = str(bt.get("DrawType", "Cube"))
+	info["custom_model_path"] = str(def.get("CustomModel", ""))
 
-	# Texture path — check All, Sides, UpDown
-	var textures: Array = bt.get("Textures", [])
-	if textures.size() > 0 and textures[0] is Dictionary:
-		var tex_dict: Dictionary = textures[0] as Dictionary
-		var tex_path: String = str(tex_dict.get("All", ""))
-		if tex_path.is_empty():
-			tex_path = str(tex_dict.get("Sides", ""))
-		if tex_path.is_empty():
-			tex_path = str(tex_dict.get("UpDown", ""))
-		info["texture_path"] = tex_path
-	else:
-		info["texture_path"] = ""
-
-	# Custom model
-	info["custom_model_path"] = str(bt.get("CustomModel", ""))
+	var draw_type := str(def.get("DrawType", ""))
+	if draw_type.is_empty():
+		draw_type = "Model" if not info["custom_model_path"].is_empty() else "Cube"
+	info["draw_type"] = draw_type
 
 	# Custom model texture
-	var custom_tex: Array = bt.get("CustomModelTexture", [])
-	if custom_tex.size() > 0 and custom_tex[0] is Dictionary:
-		info["custom_model_texture_path"] = str((custom_tex[0] as Dictionary).get("Texture", ""))
-	else:
-		info["custom_model_texture_path"] = ""
+	var custom_tex_path := ""
+	var custom_tex_v: Variant = def.get("CustomModelTexture", null)
+	if custom_tex_v is Array and (custom_tex_v as Array).size() > 0:
+		var first: Variant = (custom_tex_v as Array)[0]
+		if first is Dictionary:
+			custom_tex_path = str((first as Dictionary).get("Texture", ""))
+	info["custom_model_texture_path"] = custom_tex_path
 
-	# For Model draw type: model texture is the primary texture
-	if info["draw_type"].to_lower() == "model" and not info["custom_model_texture_path"].is_empty():
-		info["texture_path"] = info["custom_model_texture_path"]
+	# Texture paths per face group. Keep them separate so the cube can use the
+	# right texture on the top/bottom faces (Sides + UpDown) and on directional
+	# variants, instead of painting one texture over every face.
+	var all_path := ""
+	var sides_path := ""
+	var updown_path := ""
+	var up_path := ""
+	var down_path := ""
+	var north_path := ""
+	var south_path := ""
+	var east_path := ""
+	var west_path := ""
+	var textures_v: Variant = def.get("Textures", null)
+	if textures_v is Array and (textures_v as Array).size() > 0:
+		var tex_v: Variant = (textures_v as Array)[0]
+		if tex_v is Dictionary:
+			var tex_dict: Dictionary = tex_v as Dictionary
+			all_path = str(tex_dict.get("All", ""))
+			sides_path = str(tex_dict.get("Sides", ""))
+			updown_path = str(tex_dict.get("UpDown", ""))
+			up_path = str(tex_dict.get("Up", ""))
+			down_path = str(tex_dict.get("Down", ""))
+			north_path = str(tex_dict.get("North", ""))
+			south_path = str(tex_dict.get("South", ""))
+			east_path = str(tex_dict.get("East", ""))
+			west_path = str(tex_dict.get("West", ""))
+	info["texture_all_path"] = all_path
+	info["texture_sides_path"] = sides_path
+	info["texture_updown_path"] = updown_path
+	info["texture_up_path"] = up_path
+	info["texture_down_path"] = down_path
+	info["texture_north_path"] = north_path
+	info["texture_south_path"] = south_path
+	info["texture_east_path"] = east_path
+	info["texture_west_path"] = west_path
 
-	# Fallback: if no texture_path, use model texture
-	if info["texture_path"].is_empty() and not info["custom_model_texture_path"].is_empty():
-		info["texture_path"] = info["custom_model_texture_path"]
+	var tex_path := all_path
+	if tex_path.is_empty():
+		tex_path = sides_path
+	if tex_path.is_empty():
+		tex_path = updown_path
+	if tex_path.is_empty():
+		tex_path = custom_tex_path
+	info["texture_path"] = tex_path
 
 	# Category
-	var tags: Dictionary = data.get("Tags", {})
-	var type_tags: Array = tags.get("Type", [])
+	var type_tags: Array = []
+	var tags_v: Variant = data.get("Tags", null)
+	if tags_v is Dictionary:
+		var type_v: Variant = (tags_v as Dictionary).get("Type", null)
+		if type_v is Array:
+			type_tags = type_v as Array
 	info["category"] = str(type_tags[0]) if type_tags.size() > 0 else "Other"
 
 	# Fallback color
-	var particle_color: String = str(bt.get("ParticleColor", ""))
+	var particle_color: String = str(def.get("ParticleColor", ""))
 	if particle_color.is_empty():
-		particle_color = str(bt.get("TextureComputedColor", ""))
+		particle_color = str(def.get("TextureComputedColor", ""))
 	info["fallback_color"] = _parse_hex_color(particle_color) if not particle_color.is_empty() else Color(0.72, 0.72, 0.72)
 
-	info["material"] = str(bt.get("Material", "Solid"))
+	info["material"] = str(def.get("Material", "Solid"))
 	return info
+
+
+## Reads a JSON file during the import pass, using the already-built file set
+## instead of asking the zip for existence on every item (avoids repeated scans).
+static func _read_json_from_zip_checked(zip: ZIPReader, path: String, file_set: Dictionary) -> Variant:
+	var normalized := path.replace("\\", "/")
+	if not file_set.has(normalized):
+		return null
+	var bytes := zip.read_file(path)
+	if bytes == null or bytes.size() == 0:
+		return null
+	var text := bytes.get_string_from_utf8()
+	if text.is_empty():
+		return null
+	var json := JSON.new()
+	if json.parse(text) != OK:
+		return null
+	return json.data
 
 
 ## Reads and parses a JSON file from inside the zip.
@@ -388,12 +649,19 @@ static func save_catalog(catalog: Dictionary) -> Error:
 	if f == null:
 		return FileAccess.get_open_error()
 	var serializable := {}
-	# Save the zip path for lazy loading on next session
+	# Save metadata used for cache validation / lazy loading.
 	serializable["__zip_path"] = _current_zip_path
+	serializable["__zip_version"] = _current_zip_version
+	const RUNTIME_KEYS := ["icon_texture", "texture", "model_texture", "custom_mesh", "face_textures"]
 	for block_id in catalog:
-		var entry: Dictionary = catalog[block_id]
+		var entry_v: Variant = catalog[block_id]
+		if not (entry_v is Dictionary):
+			continue
+		var entry: Dictionary = entry_v as Dictionary
 		var save_entry := {}
 		for key in entry:
+			if RUNTIME_KEYS.has(key):
+				continue
 			var val = entry[key]
 			if val is Texture2D or val is Mesh or val is Image:
 				continue
@@ -421,53 +689,94 @@ static func load_cached_catalog() -> Dictionary:
 	if typeof(data) != TYPE_DICTIONARY:
 		return {}
 	var d: Dictionary = data as Dictionary
-	# Restore zip path for lazy loading
+	# Restore metadata for lazy loading / cache validation.
 	if d.has("__zip_path"):
 		_current_zip_path = str(d["__zip_path"])
-		d.erase("__zip_path")
+	if d.has("__zip_version"):
+		_cached_catalog_version = str(d["__zip_version"])
+	for key in d.keys():
+		if str(key).begins_with("__"):
+			d.erase(key)
 	return d
 
 
 ## Loads an icon on-demand: tries disk cache first, then zip.
-static func get_icon_lazy(block_id: String, rel_path: String) -> Texture2D:
+static func get_icon_lazy(block_id: String, rel_path: String, cached_file: String = "") -> Texture2D:
 	if rel_path.is_empty():
 		return null
-	# Try disk cache first (icons directory)
-	var disk_path := ICONS_DIR + block_id + ".png"
-	if FileAccess.file_exists(disk_path):
-		return _load_texture_from_disk(disk_path)
-	# Fall back to zip
-	if _current_zip == null:
-		return null
-	return _load_texture_from_zip(_current_zip, COMMON_PREFIX + rel_path)
+	return _get_texture_cached(ICONS_DIR, block_id, rel_path, cached_file, _icon_cache, true)
 
 
 ## Loads a texture on-demand: tries disk cache first, then zip.
-static func get_texture_lazy(block_id: String, rel_path: String) -> Texture2D:
+static func get_texture_lazy(block_id: String, rel_path: String, cached_file: String = "") -> Texture2D:
 	if rel_path.is_empty():
 		return null
-	# Try disk cache first (textures directory)
-	var disk_path := TEXTURES_DIR + block_id + ".png"
-	if FileAccess.file_exists(disk_path):
-		return _load_texture_from_disk(disk_path)
+	return _get_texture_cached(TEXTURES_DIR, block_id, rel_path, cached_file, _texture_cache, true)
+
+
+## Loads the model atlas texture on-demand. When the catalog provides a cached
+## file, use it directly (it may differ from the cube texture, e.g. ores).
+static func get_model_texture_lazy(block_id: String, rel_path: String, cached_file: String = "") -> Texture2D:
+	if rel_path.is_empty():
+		return null
+	return _get_texture_cached(TEXTURES_DIR, block_id, rel_path, cached_file, _texture_cache, false)
+
+
+static func _get_texture_cached(dir_path: String, block_id: String, rel_path: String,
+		cached_file: String, cache: Dictionary, allow_legacy: bool) -> Texture2D:
+	var disk_path := ""
+	if not cached_file.is_empty():
+		disk_path = dir_path + cached_file
+	elif allow_legacy:
+		var legacy := dir_path + block_id + ".png"
+		if FileAccess.file_exists(legacy):
+			disk_path = legacy
+	if not disk_path.is_empty() and FileAccess.file_exists(disk_path):
+		if cache.has(disk_path):
+			return cache[disk_path] as Texture2D
+		var tex := _load_texture_from_disk(disk_path)
+		cache[disk_path] = tex
+		return tex
+	# Fall back to the zip (main-thread lazy loading only).
+	if _current_zip == null:
+		return null
+	var zip_key := "zip|" + COMMON_PREFIX + rel_path
+	if cache.has(zip_key):
+		return cache[zip_key] as Texture2D
+	var zip_tex := _load_texture_from_zip(_current_zip, COMMON_PREFIX + rel_path)
+	cache[zip_key] = zip_tex
+	return zip_tex
+
+
+## Loads a model mesh on-demand: tries disk cache first, then zip. Meshes are
+## cached per source file + atlas size, so blocks sharing a model reuse it.
+static func get_model_lazy(block_id: String, rel_path: String,
+		atlas_size: Vector2i = Vector2i(64, 64), cached_file: String = "") -> Mesh:
+	if rel_path.is_empty():
+		return null
+	var disk_path := ""
+	if not cached_file.is_empty():
+		disk_path = MODELS_DIR + cached_file
+	else:
+		var legacy := MODELS_DIR + block_id + ".json"
+		if FileAccess.file_exists(legacy):
+			disk_path = legacy
+	if not disk_path.is_empty() and FileAccess.file_exists(disk_path):
+		var key := disk_path + "|" + str(atlas_size)
+		if _model_cache.has(key):
+			return _model_cache[key] as Mesh
+		var mesh := _load_blockymodel_from_disk(disk_path, atlas_size)
+		_model_cache[key] = mesh
+		return mesh
 	# Fall back to zip
 	if _current_zip == null:
 		return null
-	return _load_texture_from_zip(_current_zip, COMMON_PREFIX + rel_path)
-
-
-## Loads a model mesh on-demand: tries disk cache first, then zip.
-static func get_model_lazy(block_id: String, rel_path: String, atlas_size: Vector2i = Vector2i(64, 64)) -> Mesh:
-	if rel_path.is_empty():
-		return null
-	# Try disk cache first
-	var disk_path := MODELS_DIR + block_id + ".json"
-	if FileAccess.file_exists(disk_path):
-		return _load_blockymodel_from_disk(disk_path, atlas_size)
-	# Fall back to zip
-	if _current_zip == null:
-		return null
-	return _load_blockymodel_from_zip(_current_zip, COMMON_PREFIX + rel_path, atlas_size)
+	var zip_key := "zip|" + COMMON_PREFIX + rel_path + "|" + str(atlas_size)
+	if _model_cache.has(zip_key):
+		return _model_cache[zip_key] as Mesh
+	var zip_mesh := _load_blockymodel_from_zip(_current_zip, COMMON_PREFIX + rel_path, atlas_size)
+	_model_cache[zip_key] = zip_mesh
+	return zip_mesh
 
 
 ## Loads a texture from a file on disk.
@@ -509,10 +818,16 @@ static func _load_blockymodel_from_disk(path: String, atlas_size: Vector2i) -> M
 
 
 ## Re-opens the current zip (call this when starting a new session).
-## Skips if the zip is already open (avoids unnecessary close+reopen).
+## Reopens only when the requested path differs from the currently open zip.
 static func reopen_zip() -> void:
-	if _current_zip != null:
+	if _current_zip != null and _opened_zip_path == _current_zip_path:
 		return
+	if _current_zip != null:
+		_current_zip.close()
+		_current_zip = null
+	_opened_zip_path = ""
 	if not _current_zip_path.is_empty() and FileAccess.file_exists(_current_zip_path):
-		_current_zip = ZIPReader.new()
-		_current_zip.open(_current_zip_path)
+		var zip := ZIPReader.new()
+		if zip.open(_current_zip_path) == OK:
+			_current_zip = zip
+			_opened_zip_path = _current_zip_path

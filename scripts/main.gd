@@ -2,6 +2,8 @@
 # All nodes live in main.tscn; this script wires signals and drives logic.
 extends Control
 
+const NeonTheme = preload("res://scripts/neon_theme.gd")
+
 # ═══ Scene nodes via %UniqueName ══════════════════════════════════════════════
 @onready var _vp_ctr        : SubViewportContainer = %ViewportContainer
 @onready var _sub_vp        : SubViewport           = %SubViewport
@@ -91,9 +93,15 @@ var _sel_entry    : ReferenceImageManager.RefEntry = null
 var _active_tool  : BlockEditor.Tool = BlockEditor.Tool.SELECT
 var _bottom_open  : bool   = true
 var _grid_mesh    : MeshInstance3D
+var _grid_half_size : int  = 50
+
+const GRID_BASE_HALF   := 50
+const ZOOM_BASE_MAX    := 150.0
+const GRID_SCALE_STEPS := [1, 2, 5, 10, 20, 50]
 
 # ═══ BLOCK PALETTE ═══════════════════════════════════════════════════════════
 var _palette_buttons : Array = []
+var _icon_queue      : Array = []
 var _copy_block_mode : bool = false
 
 # ── ASSETS IMPORT THREAD ──────────────────────────────────────────────────────
@@ -101,6 +109,9 @@ var _import_thread   : Thread = null
 var _importer        : HytaleImporter = null
 var _import_overlay  : Control = null
 var _import_label    : Label = null
+var _import_progress : ProgressBar = null
+var _import_detail   : Label = null
+var _import_start_ms : int = 0
 
 
 # ── UNDO/REDO SYSTEM ──────────────────────────────────────────────────────────
@@ -124,6 +135,11 @@ var _sel_shape_pick  : OptionButton = null
 var _sel_mode_pick   : OptionButton = null
 var _sel_action_pick : OptionButton = null
 var _sel_border_spin : SpinBox      = null
+var _grid_scale_pick : OptionButton = null
+var _grid_radius_spin: SpinBox      = null
+var _zoom_max_spin   : SpinBox      = null
+var _section_brush   : Control      = null
+var _section_selection : Control    = null
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -131,11 +147,15 @@ var _sel_border_spin : SpinBox      = null
 # ═════════════════════════════════════════════════════════════════════════════
 
 func _ready() -> void:
+	theme = NeonTheme.build()
 	_build_3d_scene()
 	_build_palette()
 	_build_menus()
 	_init_dialogs()
 	_ensure_selection_controls()
+	_ensure_grid_controls()
+	_restructure_left_panel()
+	_style_special_controls()
 	_connect_signals()
 	_refresh_groups()
 	_rebuild_cam_list()
@@ -446,17 +466,24 @@ func _build_3d_scene() -> void:
 
 
 func _setup_grid() -> void:
+	var was_visible := true
+	if is_instance_valid(_grid_mesh):
+		was_visible = _grid_mesh.visible
+		_grid_mesh.queue_free()
+		_grid_mesh = null
+
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_LINES)
-	const H := 50
-	for i in range(-H, H + 1):
+	var h := _grid_half_size
+	var step := maxi(1, int(ceil(float(h) / 500.0)))
+	for i in range(-h, h + 1, step):
 		var fi := float(i)
-		st.set_color(Color(0.85, 0.25, 0.25, 0.9) if i == 0 else Color(0.28, 0.30, 0.35, 0.5))
-		st.add_vertex(Vector3(fi, 0, -H))
-		st.add_vertex(Vector3(fi, 0,  H))
-		st.set_color(Color(0.25, 0.45, 0.85, 0.9) if i == 0 else Color(0.28, 0.30, 0.35, 0.5))
-		st.add_vertex(Vector3(-H, 0, fi))
-		st.add_vertex(Vector3( H, 0, fi))
+		st.set_color(Color(1.0, 0.18, 0.65, 0.9) if i == 0 else Color(0.08, 0.30, 0.40, 0.55))
+		st.add_vertex(Vector3(fi, 0, -h))
+		st.add_vertex(Vector3(fi, 0,  h))
+		st.set_color(Color(0.0, 0.90, 1.0, 0.9) if i == 0 else Color(0.08, 0.30, 0.40, 0.55))
+		st.add_vertex(Vector3(-h, 0, fi))
+		st.add_vertex(Vector3( h, 0, fi))
 
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
@@ -466,6 +493,7 @@ func _setup_grid() -> void:
 	_grid_mesh      = MeshInstance3D.new()
 	_grid_mesh.mesh = st.commit()
 	_grid_mesh.set_surface_override_material(0, mat)
+	_grid_mesh.visible = was_visible
 	_world.add_child(_grid_mesh)
 
 
@@ -475,6 +503,7 @@ func _setup_grid() -> void:
 
 func _build_palette() -> void:
 	_palette_buttons.clear()
+	_icon_queue.clear()
 
 	if _palette_tabs == null:
 		_create_palette_nodes()
@@ -545,42 +574,50 @@ func _create_block_button(bname: String) -> Button:
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 
-	# Set icon if available
-	var icon_tex := BlockCatalog.get_icon(bname)
-	if icon_tex != null:
-		btn.icon = icon_tex
-		btn.expand_icon = true
-		btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	# Icons are loaded progressively in _process so the palette opens instantly.
+	btn.set_meta("icon_loaded", false)
+	_icon_queue.append(btn)
 
-	# Apply style with block color
+	# Apply a neon style tinted with the block color.
 	var color := BlockCatalog.get_fallback_color(bname)
+	var accent := color.lerp(Color(0.0, 0.85, 1.0), 0.45)
+
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.16, 0.16, 0.18, 1.0)
-	normal.border_color = color.lightened(0.10)
-	normal.border_width_left = 2
-	normal.border_width_top = 2
-	normal.border_width_right = 2
-	normal.border_width_bottom = 2
-	normal.corner_radius_top_left = 6
-	normal.corner_radius_top_right = 6
-	normal.corner_radius_bottom_right = 6
-	normal.corner_radius_bottom_left = 6
+	normal.bg_color = Color(0.043, 0.067, 0.102, 0.94)
+	normal.border_color = accent.darkened(0.15)
+	normal.border_width_left = 3
+	normal.border_width_top = 1
+	normal.border_width_right = 1
+	normal.border_width_bottom = 1
+	normal.corner_radius_top_left = 7
+	normal.corner_radius_top_right = 7
+	normal.corner_radius_bottom_right = 7
+	normal.corner_radius_bottom_left = 7
+	normal.content_margin_left = 9
+	normal.content_margin_right = 8
+	normal.content_margin_top = 4
+	normal.content_margin_bottom = 4
 
 	var hover := normal.duplicate()
-	hover.bg_color = normal.bg_color.lightened(0.10)
-	hover.border_color = color.lightened(0.25)
+	hover.bg_color = Color(0.070, 0.115, 0.165, 0.98)
+	hover.border_color = accent.lightened(0.20)
+	hover.shadow_color = Color(accent.r, accent.g, accent.b, 0.35)
+	hover.shadow_size = 4
 
 	var pressed := normal.duplicate()
-	pressed.bg_color = color.darkened(0.25)
-	pressed.border_color = color.lightened(0.35)
+	pressed.bg_color = accent.darkened(0.55)
+	pressed.border_color = Color(0.0, 0.90, 1.0)
+	pressed.shadow_color = Color(0.0, 0.85, 1.0, 0.45)
+	pressed.shadow_size = 5
 
 	btn.add_theme_stylebox_override("normal", normal)
 	btn.add_theme_stylebox_override("hover", hover)
 	btn.add_theme_stylebox_override("pressed", pressed)
-	btn.add_theme_color_override("font_color", Color.WHITE)
+	btn.add_theme_stylebox_override("focus", normal)
+	btn.add_theme_color_override("font_color", Color(0.85, 0.97, 1.0))
 	btn.add_theme_color_override("font_hover_color", Color.WHITE)
 	btn.add_theme_color_override("font_pressed_color", Color.WHITE)
-	btn.add_theme_font_size_override("font_size", 10)
+	btn.add_theme_font_size_override("font_size", 11)
 
 	btn.set_meta("block_name", bname)
 	btn.pressed.connect(_on_palette_button_pressed.bind(btn))
@@ -784,6 +821,303 @@ func _refresh_selection_ui() -> void:
 	_set_selection_action(
 		_sel_action_pick.selected if _sel_action_pick else int(_editor.sel_action)
 	)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  GRID & ZOOM CONTROLS
+# ═════════════════════════════════════════════════════════════════════════════
+
+func _ensure_grid_controls() -> void:
+	var left_vbox := get_node_or_null(
+		"RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"
+	) as VBoxContainer
+	if left_vbox == null:
+		return
+
+	var existing := left_vbox.get_node_or_null("GridScaleRow")
+	if existing != null:
+		_grid_scale_pick  = left_vbox.get_node_or_null("GridScaleRow/GridScaleOption") as OptionButton
+		_grid_radius_spin = left_vbox.get_node_or_null("GridRadiusRow/GridRadiusSpin") as SpinBox
+		_zoom_max_spin    = left_vbox.get_node_or_null("ZoomMaxRow/ZoomMaxSpin") as SpinBox
+		_sync_grid_controls()
+		return
+
+	var insert_idx := left_vbox.get_child_count()
+	var y_row := left_vbox.get_node_or_null("YLevelHBox")
+	if y_row:
+		insert_idx = y_row.get_index() + 1
+
+	var sep := HSeparator.new()
+	sep.name = "GridZoomSep"
+	left_vbox.add_child(sep)
+	left_vbox.move_child(sep, insert_idx)
+	insert_idx += 1
+
+	var title := Label.new()
+	title.name = "GridZoomTitle"
+	title.text = "Grid & Zoom"
+	left_vbox.add_child(title)
+	left_vbox.move_child(title, insert_idx)
+	insert_idx += 1
+
+	var scale_row := HBoxContainer.new()
+	scale_row.name = "GridScaleRow"
+	scale_row.add_theme_constant_override("separation", 6)
+	var scale_lbl := Label.new()
+	scale_lbl.text = "Scale"
+	scale_row.add_child(scale_lbl)
+
+	_grid_scale_pick = OptionButton.new()
+	_grid_scale_pick.name = "GridScaleOption"
+	_grid_scale_pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_grid_scale_pick.tooltip_text = "Scales both the grid size and the maximum camera distance."
+	for factor in GRID_SCALE_STEPS:
+		_grid_scale_pick.add_item("%d×" % factor)
+		_grid_scale_pick.set_item_metadata(_grid_scale_pick.item_count - 1, factor)
+	_grid_scale_pick.select(0)
+	scale_row.add_child(_grid_scale_pick)
+
+	left_vbox.add_child(scale_row)
+	left_vbox.move_child(scale_row, insert_idx)
+	insert_idx += 1
+
+	var radius_row := HBoxContainer.new()
+	radius_row.name = "GridRadiusRow"
+	radius_row.add_theme_constant_override("separation", 6)
+	var radius_lbl := Label.new()
+	radius_lbl.text = "Grid radius"
+	radius_row.add_child(radius_lbl)
+
+	_grid_radius_spin = SpinBox.new()
+	_grid_radius_spin.name = "GridRadiusSpin"
+	_grid_radius_spin.min_value = 5
+	_grid_radius_spin.max_value = 5000
+	_grid_radius_spin.step = 5
+	_grid_radius_spin.value = GRID_BASE_HALF
+	_grid_radius_spin.suffix = " blocks"
+	_grid_radius_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_grid_radius_spin.tooltip_text = "Grid half-size in blocks (±N)."
+	radius_row.add_child(_grid_radius_spin)
+
+	left_vbox.add_child(radius_row)
+	left_vbox.move_child(radius_row, insert_idx)
+	insert_idx += 1
+
+	var zoom_row := HBoxContainer.new()
+	zoom_row.name = "ZoomMaxRow"
+	zoom_row.add_theme_constant_override("separation", 6)
+	var zoom_lbl := Label.new()
+	zoom_lbl.text = "Max zoom"
+	zoom_row.add_child(zoom_lbl)
+
+	_zoom_max_spin = SpinBox.new()
+	_zoom_max_spin.name = "ZoomMaxSpin"
+	_zoom_max_spin.min_value = 10
+	_zoom_max_spin.max_value = 100000
+	_zoom_max_spin.step = 10
+	_zoom_max_spin.value = ZOOM_BASE_MAX
+	_zoom_max_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_zoom_max_spin.tooltip_text = "Maximum distance the camera can move away from the pivot."
+	zoom_row.add_child(_zoom_max_spin)
+
+	left_vbox.add_child(zoom_row)
+	left_vbox.move_child(zoom_row, insert_idx)
+
+	_grid_scale_pick.item_selected.connect(func(index):
+		_apply_grid_scale(int(_grid_scale_pick.get_item_metadata(index)))
+	)
+	_grid_radius_spin.value_changed.connect(func(v): _set_grid_half_size(int(v)))
+	_zoom_max_spin.value_changed.connect(func(v): _set_max_zoom(v))
+	_sync_grid_controls()
+
+
+func _sync_grid_controls() -> void:
+	if _grid_radius_spin:
+		_grid_radius_spin.set_value_no_signal(_grid_half_size)
+	if _zoom_max_spin:
+		_zoom_max_spin.set_value_no_signal(_cam_ctrl.max_cam_distance)
+
+
+func _apply_grid_scale(factor: int) -> void:
+	var new_zoom := ZOOM_BASE_MAX * float(factor)
+	var new_radius := GRID_BASE_HALF * factor
+	if _zoom_max_spin:
+		_zoom_max_spin.set_value_no_signal(new_zoom)
+	if _grid_radius_spin:
+		_grid_radius_spin.set_value_no_signal(new_radius)
+	_cam_ctrl.set_max_zoom(new_zoom)
+	_set_grid_half_size(new_radius)
+	_status("Grid & Zoom: %d× — grid ±%d blocks, max zoom %d." % [
+		factor, new_radius, int(new_zoom)
+	])
+
+
+func _set_grid_half_size(size: int) -> void:
+	size = clampi(size, 5, 5000)
+	if size == _grid_half_size and is_instance_valid(_grid_mesh):
+		return
+	_grid_half_size = size
+	_setup_grid()
+	var step := maxi(1, int(ceil(float(size) / 500.0)))
+	_status("Grid: ±%d blocks (line step %d)." % [size, step])
+
+
+func _set_max_zoom(value: float) -> void:
+	_cam_ctrl.set_max_zoom(value)
+	_status("Max zoom distance: %d." % int(value))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  LEFT PANEL LAYOUT
+# ═════════════════════════════════════════════════════════════════════════════
+
+func _restructure_left_panel() -> void:
+	var left_vbox := get_node_or_null(
+		"RootVBox/WorkHBox/LeftPanel/LeftScroll/LM/LeftVBox"
+	) as VBoxContainer
+	if left_vbox == null or left_vbox.get_node_or_null("SectionTools") != null:
+		return
+
+	left_vbox.add_theme_constant_override("separation", 8)
+
+	var brand := VBoxContainer.new()
+	brand.name = "BrandHeader"
+	brand.add_theme_constant_override("separation", 0)
+	var brand_title := Label.new()
+	brand_title.text = "Hytale Prefab Viewer"
+	brand_title.add_theme_font_size_override("font_size", 15)
+	brand_title.add_theme_color_override("font_color", Color(0.0, 0.90, 1.0))
+	var brand_sub := Label.new()
+	brand_sub.text = "BUILD WORKSPACE"
+	brand_sub.add_theme_font_size_override("font_size", 9)
+	brand_sub.add_theme_color_override("font_color", Color(0.38, 0.56, 0.66))
+	brand.add_child(brand_title)
+	brand.add_child(brand_sub)
+	left_vbox.add_child(brand)
+	left_vbox.move_child(brand, 0)
+
+	var tools     := _make_section("SectionTools", "TOOLS", true)
+	var brush     := _make_section("SectionBrush", "BRUSH", false)
+	var mirror    := _make_section("SectionMirror", "MIRROR", false)
+	var selection := _make_section("SectionSelection", "SELECTION", false)
+	var grid      := _make_section("SectionGrid", "GRID & ZOOM", false)
+	var info      := _make_section("SectionInfo", "INFO", false)
+
+	for card in [tools, brush, mirror, selection, grid, info]:
+		left_vbox.add_child(card)
+
+	_section_brush = brush
+	_section_selection = selection
+
+	_move_nodes(left_vbox, tools, [
+		"LblMode", "ModeHBox", "LblBlock", "BlockNameEdit", "BlockCtrlHBox",
+	])
+	_move_nodes(left_vbox, brush, [
+		"LblBrushSz", "BrushSizeHBox", "LblBrushDir", "BrushDirHBox",
+		"BrushHeightHBox", "YLevelHBox",
+	])
+	_move_nodes(left_vbox, mirror, ["MirrorHBox", "MirrorOffsetHBox"])
+	_move_nodes(left_vbox, selection, [
+		"SelShapeHBox", "SelShapeAdvancedRow", "SelModeRow", "SelActionRow",
+		"SelBorderRow", "SelFillCheck", "SelApplyBtn", "SelClearBtn",
+	])
+	_move_nodes(left_vbox, grid, ["GridScaleRow", "GridRadiusRow", "ZoomMaxRow"])
+	_move_nodes(left_vbox, info, ["InfoGrid", "CoordLbl"])
+
+	for obsolete_name in [
+		"LblMirror", "LblSelection", "LblInfo", "GridZoomTitle",
+		"Sep0", "Sep1", "Sep1b", "Sep2", "Sep3", "GridZoomSep",
+	]:
+		var obsolete := left_vbox.get_node_or_null(obsolete_name)
+		if obsolete:
+			obsolete.queue_free()
+
+
+func _make_section(node_name: String, title: String, expanded: bool) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.name = node_name
+	card.theme_type_variation = "NeonCard"
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.set_meta("section_title", title)
+
+	var holder := VBoxContainer.new()
+	holder.name = "SectionBodyVBox"
+	holder.add_theme_constant_override("separation", 3)
+	card.add_child(holder)
+
+	var header := Button.new()
+	header.name = "Header"
+	header.theme_type_variation = "NeonHeader"
+	header.toggle_mode = true
+	header.button_pressed = expanded
+	header.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	header.text = ("▾  " if expanded else "▸  ") + title
+	header.custom_minimum_size = Vector2(0, 28)
+	holder.add_child(header)
+
+	var body := VBoxContainer.new()
+	body.name = "Body"
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 4)
+	body.visible = expanded
+	holder.add_child(body)
+	card.set_meta("section_body", body)
+
+	header.toggled.connect(func(on: bool) -> void:
+		body.visible = on
+		header.text = ("▾  " if on else "▸  ") + title
+	)
+	return card
+
+
+func _move_nodes(from: Node, card: Control, node_names: Array) -> void:
+	var body := card.get_meta("section_body") as VBoxContainer
+	if body == null:
+		return
+	for node_name in node_names:
+		var node := from.get_node_or_null(node_name)
+		if node == null:
+			continue
+		from.remove_child(node)
+		body.add_child(node)
+
+
+func _open_section(card: Control) -> void:
+	if card == null or not is_instance_valid(card):
+		return
+	var holder := card.get_node_or_null("SectionBodyVBox")
+	if holder == null:
+		return
+	var header := holder.get_node_or_null("Header") as Button
+	var body := holder.get_node_or_null("Body") as VBoxContainer
+	if header == null or body == null or body.visible:
+		return
+	body.visible = true
+	header.set_pressed_no_signal(true)
+	header.text = "▾  " + String(card.get_meta("section_title", ""))
+
+
+func _style_special_controls() -> void:
+	for menu_name in ["File", "View", "Help"]:
+		var popup := %MenuBar.get_node_or_null(menu_name) as PopupMenu
+		if popup:
+			popup.theme = theme
+	if _status_lbl:
+		_status_lbl.add_theme_color_override("font_color", Color(0.35, 1.0, 0.72))
+		_status_lbl.add_theme_font_size_override("font_size", 12)
+	if _sel_apply_btn:
+		_sel_apply_btn.theme_type_variation = "NeonPrimary"
+	if _sel_clear_btn:
+		_sel_clear_btn.theme_type_variation = "NeonDanger"
+	if _palette_search:
+		_palette_search.placeholder_text = "Search blocks by name or ID…"
+
+	var palette_title := get_node_or_null(
+		"RootVBox/WorkHBox/CenterVBox/BottomPanel/BottomVBox/PaletteHdr/PaletteTitle"
+	) as Label
+	if palette_title:
+		palette_title.add_theme_color_override("font_color", Color(0.0, 0.90, 1.0))
+		palette_title.add_theme_font_size_override("font_size", 13)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1170,6 +1504,7 @@ func _make_dlg(mode: int, filters: Array, title: String, cb: Callable) -> FileDi
 	d.access     = FileDialog.ACCESS_FILESYSTEM
 	d.filters    = PackedStringArray(filters)
 	d.title      = title
+	d.theme      = theme
 	d.file_selected.connect(cb)
 	add_child(d)
 	return d
@@ -1196,22 +1531,22 @@ func _on_view_menu(id: int) -> void:
 			if rp: rp.visible = !rp.visible
 		23:  # Palette
 			_toggle_bottom()
-		24:  # Occlusion Culling
-			_occlusion_enabled = !_occlusion_enabled
-			_update_occlusion_culling()
-			_status("Occlusion Culling: %s" % ("ON" if _occlusion_enabled else "OFF"))
-		25:  # Show Axis Gizmo
-			if _axis_gizmo:
-				_axis_gizmo.visible = !_axis_gizmo.visible
-			_status("Axis Gizmo: %s" % ("ON" if _axis_gizmo.visible else "OFF"))
-		26:  # Center View
+		24:  # Center View
 			_cam_ctrl.focus_on(_renderer.get_center())
 			_status("View centered.")
 			return
-		27:  # Reset Camera
+		25:  # Reset Camera
 			_cam_ctrl.focus_on(Vector3.ZERO)
 			_status("Camera reset.")
 			return
+		26:  # Occlusion Culling
+			_occlusion_enabled = !_occlusion_enabled
+			_update_occlusion_culling()
+			_status("Occlusion Culling: %s" % ("ON" if _occlusion_enabled else "OFF"))
+		27:  # Show Axis Gizmo
+			if _axis_gizmo:
+				_axis_gizmo.visible = !_axis_gizmo.visible
+			_status("Axis Gizmo: %s" % ("ON" if _axis_gizmo.visible else "OFF"))
 
 	_refresh_view_menu_checks(view_pm)
 
@@ -1251,6 +1586,7 @@ func _show_controls_dlg() -> void:
 	dialog.title       = "Controls & Shortcuts"
 	dialog.min_size    = Vector2i(700, 540)
 	dialog.ok_button_text = "Close"
+	dialog.theme       = theme
 
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size    = Vector2i(680, 480)
@@ -1275,6 +1611,13 @@ func _show_controls_dlg() -> void:
 • [b]Mouse Wheel[/b] → Zoom In / Out
 • [b]Middle Mouse + Drag[/b] → Pan camera
 • [b]Right Mouse + Drag[/b] → Orbit camera
+
+[color=#ffcc77]─── Grid & Zoom ───[/color]
+• Left panel → [b]Grid & Zoom[/b]: scale presets from 1× to 50×
+• [b]Scale[/b] changes grid radius and max zoom distance together
+• [b]Grid radius[/b] → grid half-size in blocks (±N)
+• [b]Max zoom[/b] → maximum camera distance from the pivot
+• Large grids automatically switch to coarser line steps
 
 [color=#ffcc77]─── Tool Modes ───[/color]
 • [b]Navigate[/b] → Free camera movement only
@@ -1326,6 +1669,7 @@ func _show_controls_dlg() -> void:
 func _show_about_dlg() -> void:
 	var d := AcceptDialog.new()
 	d.title       = "About"
+	d.theme       = theme
 	d.dialog_text = (
 		"Hytale Prefab Viewer\n"
 		+ "Scale-accurate structure planning tool.\n\n"
@@ -1473,9 +1817,12 @@ func _on_assets_zip_selected(path: String) -> void:
 
 
 func _start_import_thread(path: String) -> void:
+	# Avoid loading old palette icons while the import thread rewrites the cache.
+	_icon_queue.clear()
 	_importer = HytaleImporter.new()
 	_importer.import_finished.connect(_on_import_finished)
 	_importer.import_error.connect(_on_import_error)
+	_import_start_ms = Time.get_ticks_msec()
 	_import_thread = Thread.new()
 	_import_thread.start(_import_thread_func.bind(path))
 
@@ -1494,6 +1841,19 @@ func _process(_delta: float) -> void:
 	if _importer != null and _import_label != null:
 		if _importer.progress_message != _import_label.text:
 			_import_label.text = _importer.progress_message
+		var total := _importer.progress_total
+		var current := _importer.progress_current
+		if _import_progress != null and total > 0:
+			_import_progress.max_value = maxi(total, 1)
+			_import_progress.value = clampi(current, 0, total)
+		if _import_detail != null:
+			var elapsed := 0
+			if _import_start_ms > 0:
+				elapsed = (Time.get_ticks_msec() - _import_start_ms) / 1000
+			if total > 0:
+				_import_detail.text = "%d / %d archivos  ·  %ds" % [current, total, elapsed]
+			else:
+				_import_detail.text = "Preparando…  %ds" % elapsed
 
 	# Check import thread completion
 	if _import_thread != null and _import_thread.is_started() and not _import_thread.is_alive():
@@ -1504,6 +1864,7 @@ func _process(_delta: float) -> void:
 		if not result.is_empty():
 			# Save zip path before destroying the importer
 			var imported_zip_path := HytaleImporter._current_zip_path
+			HytaleImporter.clear_runtime_caches()
 			BlockCatalog.clear()
 			for block_id in result:
 				BlockCatalog._register_block(result[block_id])
@@ -1512,10 +1873,28 @@ func _process(_delta: float) -> void:
 			BlockCatalog.set_zip_path(imported_zip_path)
 			# Reopen zip so lazy loading works (importer will be destroyed)
 			HytaleImporter.reopen_zip()
+			_renderer.clear_render_caches()
+			_renderer.rebuild_all()
 			_build_palette()
 			_status("✅ Imported %d blocks." % result.size())
 		_hide_import_overlay()
 		_importer = null
+
+	# Load a few palette icons per frame instead of blocking on ~3000 textures.
+	if _import_thread == null and not _icon_queue.is_empty():
+		var budget := mini(32, _icon_queue.size())
+		while budget > 0:
+			budget -= 1
+			var btn = _icon_queue.pop_back()
+			if not is_instance_valid(btn) or bool(btn.get_meta("icon_loaded", false)):
+				continue
+			var bname := str(btn.get_meta("block_name", ""))
+			var icon_tex := BlockCatalog.get_icon(bname)
+			if icon_tex != null:
+				btn.icon = icon_tex
+				btn.expand_icon = true
+				btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			btn.set_meta("icon_loaded", true)
 
 	# Refresh occlusion culling roughly every 500 ms (not every frame)
 	if Time.get_ticks_msec() % 500 < 20:
@@ -1546,18 +1925,49 @@ func _show_import_overlay(message: String) -> void:
 
 	var bg := ColorRect.new()
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.color = Color(0, 0, 0, 0.6)
+	bg.color = Color(0.008, 0.016, 0.028, 0.82)
 	_import_overlay.add_child(bg)
 
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_import_overlay.add_child(center)
+
+	var card := PanelContainer.new()
+	card.theme_type_variation = "NeonCard"
+	card.custom_minimum_size = Vector2(560, 0)
+	center.add_child(card)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 26)
+	margin.add_theme_constant_override("margin_right", 26)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	card.add_child(margin)
+
+	var box := VBoxContainer.new()
+	box.custom_minimum_size = Vector2(500, 0)
+	box.add_theme_constant_override("separation", 12)
+	margin.add_child(box)
+
 	_import_label = Label.new()
-	_import_label.set_anchors_preset(Control.PRESET_CENTER)
 	_import_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_import_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_import_label.text = message
-	_import_label.add_theme_font_size_override("font_size", 18)
-	_import_label.add_theme_color_override("font_color", Color.WHITE)
-	_import_label.custom_minimum_size = Vector2(500, 40)
-	_import_overlay.add_child(_import_label)
+	_import_label.add_theme_font_size_override("font_size", 20)
+	_import_label.add_theme_color_override("font_color", Color(0.0, 0.90, 1.0))
+	_import_label.custom_minimum_size = Vector2(500, 32)
+	box.add_child(_import_label)
+
+	_import_progress = ProgressBar.new()
+	_import_progress.custom_minimum_size = Vector2(500, 26)
+	_import_progress.show_percentage = true
+	box.add_child(_import_progress)
+
+	_import_detail = Label.new()
+	_import_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_import_detail.add_theme_color_override("font_color", Color(0.55, 0.75, 0.85))
+	_import_detail.custom_minimum_size = Vector2(500, 20)
+	box.add_child(_import_detail)
 
 	add_child(_import_overlay)
 	_import_overlay.move_to_front()
@@ -1568,6 +1978,9 @@ func _hide_import_overlay() -> void:
 		_import_overlay.queue_free()
 		_import_overlay = null
 		_import_label = null
+		_import_progress = null
+		_import_detail = null
+		_import_start_ms = 0
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1630,6 +2043,7 @@ func _refresh_groups() -> void:
 func _on_add_group() -> void:
 	var d  := ConfirmationDialog.new()
 	d.title = "New Group"
+	d.theme = theme
 	var le := LineEdit.new()
 	le.placeholder_text = "Group name…"
 	d.add_child(le)
@@ -1678,6 +2092,7 @@ func _on_active_group_changed(index: int) -> void:
 func _rename_group(gn: String) -> void:
 	var d  := ConfirmationDialog.new()
 	d.title = "Rename Group Label"
+	d.theme = theme
 	var le := LineEdit.new()
 	le.text             = _renderer.get_group_data(gn).label
 	le.placeholder_text = "Display label (empty = use ID)…"
@@ -1705,6 +2120,10 @@ func _set_tool(t: BlockEditor.Tool) -> void:
 	_btn_paint.button_pressed  = (t == BlockEditor.Tool.PAINT)
 	_btn_erase.button_pressed  = (t == BlockEditor.Tool.ERASE)
 	_btn_select.button_pressed = (t == BlockEditor.Tool.SHAPE_SELECT)
+	if t == BlockEditor.Tool.PAINT or t == BlockEditor.Tool.ERASE:
+		_open_section(_section_brush)
+	elif t == BlockEditor.Tool.SHAPE_SELECT:
+		_open_section(_section_selection)
 	match t:
 		BlockEditor.Tool.SELECT:       _status("Navigate — orbit/pan/zoom freely")
 		BlockEditor.Tool.PAINT:        _status("Paint — click to place blocks")

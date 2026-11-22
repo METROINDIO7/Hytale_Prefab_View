@@ -25,6 +25,7 @@ const GROUP_COLORS : Array = [
 var _groups            : Dictionary = {}
 var _color_index       : int = 0
 var _render_mesh_cache : Dictionary = {}
+var _material_cache    : Dictionary = {}
 var _dirty_groups      : Dictionary = {}
 var _rebuild_scheduled : bool = false
 var _bulk_edit_depth   : int = 0
@@ -186,12 +187,20 @@ func load_from_prefab(data: Dictionary) -> void:
 	rebuild_all()
 
 
+## Drops cached meshes/materials after new assets are imported so existing
+## blocks are rebuilt with the updated textures instead of the old ones.
+func clear_render_caches() -> void:
+	_render_mesh_cache.clear()
+	_material_cache.clear()
+
+
 func clear_all() -> void:
 	for gn in _groups.keys():
 		(_groups[gn] as GroupData).node.queue_free()
 	_groups.clear()
 	_color_index = 0
 	_render_mesh_cache.clear()
+	_material_cache.clear()
 	_dirty_groups.clear()
 	_rebuild_scheduled = false
 	_bulk_edit_depth = 0
@@ -278,140 +287,112 @@ func rebuild_group(gname: String) -> void:
 func _get_render_mesh(bname: String) -> Mesh:
 	if _render_mesh_cache.has(bname):
 		return _render_mesh_cache[bname] as Mesh
-	
-	# Try custom mesh from catalog first (blocks with .blockymodel)
+
 	var custom_mesh := BlockCatalog.get_custom_mesh(bname)
-	if custom_mesh != null:
-		var dup_mesh := custom_mesh.duplicate(true)
-		var dup_mat := _build_block_material(bname)
-		_apply_material_to_mesh(dup_mesh, dup_mat)
-		_render_mesh_cache[bname] = dup_mesh
-		return dup_mesh
-	
-	# Fallback: standard cube mesh
-	var mesh := _create_cube_mesh_with_full_uvs()
-	var material := _build_block_material(bname)
-	_apply_material_to_mesh(mesh, material)
+	var draw_type := BlockCatalog.get_draw_type(bname)
+	var mesh: Mesh = null
+
+	if custom_mesh != null and draw_type.to_lower() == "cubewithmodel":
+		# DrawType CubeWithModel = cube base + model overlay (e.g. ore veins).
+		var combined := ArrayMesh.new()
+		_append_mesh_surfaces(combined, _create_cube_mesh_with_full_uvs(bname))
+		var dup_model := custom_mesh.duplicate(true) as Mesh
+		_apply_material_to_mesh(dup_model, _build_block_material(
+				bname, BlockCatalog.get_model_texture(bname)))
+		_append_mesh_surfaces(combined, dup_model)
+		mesh = combined
+	elif custom_mesh != null:
+		var dup_mesh := custom_mesh.duplicate(true) as Mesh
+		_apply_material_to_mesh(dup_mesh, _build_block_material(
+				bname, BlockCatalog.get_model_texture(bname)))
+		mesh = dup_mesh
+	else:
+		mesh = _create_cube_mesh_with_full_uvs(bname)
+
 	_render_mesh_cache[bname] = mesh
 	return mesh
 
 
-func _build_block_material(bname: String) -> Material:
+func _build_block_material(bname: String, texture_override: Texture2D = null) -> Material:
+	var tex := texture_override
+	if tex == null:
+		tex = BlockCatalog.get_texture(bname)
+
+	var key := ""
+	if tex != null:
+		key = "tex:" + str(tex.get_instance_id())
+	else:
+		key = "color:" + BlockCatalog.get_fallback_color(bname).to_html()
+	if _material_cache.has(key):
+		return _material_cache[key] as Material
+
 	var mat := StandardMaterial3D.new()
-	var fallback_color := BlockCatalog.get_fallback_color(bname)
-	mat.albedo_color = fallback_color
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	
-	var tex := BlockCatalog.get_texture(bname)
 	if tex != null:
+		# Do not tint the texture with the fallback color (it is only a fallback).
 		mat.albedo_texture = tex
-	
+	else:
+		mat.albedo_color = BlockCatalog.get_fallback_color(bname)
+	_material_cache[key] = mat
 	return mat
 
 
-func _create_cube_mesh_with_full_uvs() -> Mesh:
-	# Create a cube mesh with proper UVs so each face uses the full texture (0-1 UVs)
+func _create_cube_mesh_with_full_uvs(bname: String) -> Mesh:
+	# One surface per face so Sides/UpDown/directional textures can be applied
+	# independently (top/bottom used to get the side texture painted on them).
 	var mesh := ArrayMesh.new()
-	
-	var size := BLOCK_SIZE * 0.97
-	var half_size := size * 0.5
-	
-	# Define vertices for a cube (counter-clockwise winding for correct normals)
-	var vertices := PackedVector3Array([
-		# Front face (Z+)
-		Vector3(-half_size, -half_size, half_size),  # bottom-left
-		Vector3(half_size, -half_size, half_size),   # bottom-right
-		Vector3(half_size, half_size, half_size),    # top-right
-		Vector3(-half_size, half_size, half_size),   # top-left
-		
-		# Back face (Z-)
-		Vector3(half_size, -half_size, -half_size),   # bottom-left
-		Vector3(-half_size, -half_size, -half_size),  # bottom-right
-		Vector3(-half_size, half_size, -half_size),   # top-right
-		Vector3(half_size, half_size, -half_size),    # top-left
-		
-		# Left face (X-)
-		Vector3(-half_size, -half_size, -half_size),  # bottom-left
-		Vector3(-half_size, -half_size, half_size),   # bottom-right
-		Vector3(-half_size, half_size, half_size),    # top-right
-		Vector3(-half_size, half_size, -half_size),   # top-left
-		
-		# Right face (X+)
-		Vector3(half_size, -half_size, half_size),    # bottom-left
-		Vector3(half_size, -half_size, -half_size),   # bottom-right
-		Vector3(half_size, half_size, -half_size),    # top-right
-		Vector3(half_size, half_size, half_size),     # top-left
-		
-		# Top face (Y+)
-		Vector3(-half_size, half_size, half_size),    # bottom-left
-		Vector3(half_size, half_size, half_size),     # bottom-right
-		Vector3(half_size, half_size, -half_size),    # top-right
-		Vector3(-half_size, half_size, -half_size),   # top-left
-		
-		# Bottom face (Y-)
-		Vector3(-half_size, -half_size, -half_size),  # bottom-left
-		Vector3(half_size, -half_size, -half_size),   # bottom-right
-		Vector3(half_size, -half_size, half_size),    # top-right
-		Vector3(-half_size, -half_size, half_size)    # top-left
+	var half_size := BLOCK_SIZE * 0.97 * 0.5
+	var hs := half_size
+	var faces: Array = [
+		{"name": "front", "normal": Vector3(0, 0, -1), "verts": [
+			Vector3(-hs, -hs, hs), Vector3(hs, -hs, hs),
+			Vector3(hs, hs, hs), Vector3(-hs, hs, hs)]},
+		{"name": "back", "normal": Vector3(0, 0, 1), "verts": [
+			Vector3(hs, -hs, -hs), Vector3(-hs, -hs, -hs),
+			Vector3(-hs, hs, -hs), Vector3(hs, hs, -hs)]},
+		{"name": "left", "normal": Vector3(1, 0, 0), "verts": [
+			Vector3(-hs, -hs, -hs), Vector3(-hs, -hs, hs),
+			Vector3(-hs, hs, hs), Vector3(-hs, hs, -hs)]},
+		{"name": "right", "normal": Vector3(-1, 0, 0), "verts": [
+			Vector3(hs, -hs, hs), Vector3(hs, -hs, -hs),
+			Vector3(hs, hs, -hs), Vector3(hs, hs, hs)]},
+		{"name": "top", "normal": Vector3(0, -1, 0), "verts": [
+			Vector3(-hs, hs, hs), Vector3(hs, hs, hs),
+			Vector3(hs, hs, -hs), Vector3(-hs, hs, -hs)]},
+		{"name": "bottom", "normal": Vector3(0, 1, 0), "verts": [
+			Vector3(-hs, -hs, -hs), Vector3(hs, -hs, -hs),
+			Vector3(hs, -hs, hs), Vector3(-hs, -hs, hs)]},
+	]
+	var face_uvs := PackedVector2Array([
+		Vector2(0, 1), Vector2(1, 1), Vector2(1, 0), Vector2(0, 0)
 	])
-	
-	# UVs - each face uses full texture (0-1), corrected for proper orientation
-	var uvs := PackedVector2Array()
-	for i in range(6):  # 6 faces
-		uvs.append_array([
-			Vector2(0, 1),  # bottom-left
-			Vector2(1, 1),  # bottom-right
-			Vector2(1, 0),  # top-right
-			Vector2(0, 0)   # top-left
-		])
-	
-	# Normals (one per vertex, inverted for correct culling)
-	var normals := PackedVector3Array([
-		# Front (Z- - inverted)
-		Vector3(0, 0, -1), Vector3(0, 0, -1), Vector3(0, 0, -1), Vector3(0, 0, -1),
-		# Back (Z+ - inverted)
-		Vector3(0, 0, 1), Vector3(0, 0, 1), Vector3(0, 0, 1), Vector3(0, 0, 1),
-		# Left (X+ - inverted)
-		Vector3(1, 0, 0), Vector3(1, 0, 0), Vector3(1, 0, 0), Vector3(1, 0, 0),
-		# Right (X- - inverted)
-		Vector3(-1, 0, 0), Vector3(-1, 0, 0), Vector3(-1, 0, 0), Vector3(-1, 0, 0),
-		# Top (Y- - inverted)
-		Vector3(0, -1, 0), Vector3(0, -1, 0), Vector3(0, -1, 0), Vector3(0, -1, 0),
-		# Bottom (Y+ - inverted)
-		Vector3(0, 1, 0), Vector3(0, 1, 0), Vector3(0, 1, 0), Vector3(0, 1, 0)
-	])
-	
-	# Indices for triangles (clockwise winding to match inverted normals)
-	var indices := PackedInt32Array([
-		# Front face (0-3) - clockwise
-		0, 1, 2, 2, 3, 0,
-		# Back face (4-7) - clockwise
-		4, 5, 6, 6, 7, 4,
-		# Left face (8-11) - clockwise
-		8, 9, 10, 10, 11, 8,
-		# Right face (12-15) - clockwise
-		12, 13, 14, 14, 15, 12,
-		# Top face (16-19) - clockwise
-		16, 17, 18, 18, 19, 16,
-		# Bottom face (20-23) - clockwise
-		20, 21, 22, 22, 23, 20
-	])
-	
-	# Create arrays
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_NORMAL] = normals
-	arrays[Mesh.ARRAY_TEX_UV] = uvs
-	arrays[Mesh.ARRAY_INDEX] = indices
-	
-	# Add surface
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	
+	for f in faces:
+		var n: Vector3 = f["normal"]
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array(f["verts"])
+		arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([n, n, n, n])
+		arrays[Mesh.ARRAY_TEX_UV] = face_uvs
+		arrays[Mesh.ARRAY_INDEX] = PackedInt32Array([0, 1, 2, 2, 3, 0])
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		var tex := BlockCatalog.get_face_texture(bname, str(f["name"]))
+		mesh.surface_set_material(mesh.get_surface_count() - 1,
+				_build_block_material(bname, tex))
 	return mesh
+
+
+func _append_mesh_surfaces(dst: ArrayMesh, src: Mesh) -> void:
+	if src == null:
+		return
+	for s in range(src.get_surface_count()):
+		var arrays: Array = src.surface_get_arrays(s)
+		dst.add_surface_from_arrays(src.surface_get_primitive_type(s), arrays)
+		var mat := src.surface_get_material(s)
+		if mat != null:
+			dst.surface_set_material(dst.get_surface_count() - 1, mat)
 
 
 func _apply_material_to_mesh(mesh: Mesh, material: Material) -> void:

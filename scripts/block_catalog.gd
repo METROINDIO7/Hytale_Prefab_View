@@ -47,6 +47,7 @@ static func import_from_zip(zip_path: String) -> int:
 	var catalog := importer.import_from_zip(zip_path)
 	if catalog.is_empty():
 		return 0
+	HytaleImporter.clear_runtime_caches()
 	_blocks.clear()
 	_categories.clear()
 	for block_id in catalog:
@@ -61,8 +62,8 @@ static func import_from_zip(zip_path: String) -> int:
 ## Sets the zip path for lazy resource loading (call when zip is opened).
 static func set_zip_path(zip_path: String) -> void:
 	_zip_path = zip_path
-	# Ensure zip is open for lazy loading
-	if not zip_path.is_empty() and HytaleImporter._current_zip == null:
+	# Ensure the correct zip is open for lazy loading
+	if not zip_path.is_empty():
 		HytaleImporter.reopen_zip()
 
 
@@ -112,7 +113,7 @@ static func get_icon(block_id: String) -> Texture2D:
 	var icon_path: String = str(entry.get("icon_path", ""))
 	if icon_path.is_empty():
 		return null
-	var tex := HytaleImporter.get_icon_lazy(block_id, icon_path)
+	var tex := HytaleImporter.get_icon_lazy(block_id, icon_path, str(entry.get("icon_file", "")))
 	if tex != null:
 		entry["icon_texture"] = tex
 	return tex
@@ -130,9 +131,86 @@ static func get_texture(block_id: String) -> Texture2D:
 	var tex_path: String = str(entry.get("texture_path", ""))
 	if tex_path.is_empty():
 		return null
-	var tex := HytaleImporter.get_texture_lazy(block_id, tex_path)
+	var tex := HytaleImporter.get_texture_lazy(block_id, tex_path, str(entry.get("texture_file", "")))
 	if tex != null:
 		entry["texture"] = tex
+	return tex
+
+
+## Returns the texture a custom model should use (its atlas). This can differ
+## from the cube texture, e.g. CubeWithModel ores use a rock cube + ore model.
+static func get_model_texture(block_id: String) -> Texture2D:
+	_ensure_loaded()
+	var entry: Dictionary = _blocks.get(block_id, {})
+	var cached: Variant = entry.get("model_texture", null)
+	if cached != null and cached is Texture2D:
+		return cached as Texture2D
+	var model_tex_path: String = str(entry.get("custom_model_texture_path", ""))
+	if model_tex_path.is_empty():
+		return get_texture(block_id)
+	var tex_path: String = str(entry.get("texture_path", ""))
+	if model_tex_path == tex_path:
+		var same := get_texture(block_id)
+		entry["model_texture"] = same
+		return same
+	var file: String = str(entry.get("model_texture_file", ""))
+	var tex := HytaleImporter.get_model_texture_lazy(block_id, model_tex_path, file)
+	if tex == null:
+		tex = get_texture(block_id)
+	if tex != null:
+		entry["model_texture"] = tex
+	return tex
+
+
+## Returns the correct texture for one cube face (All/Sides/UpDown/directional).
+static func get_face_texture(block_id: String, face: String) -> Texture2D:
+	_ensure_loaded()
+	var entry: Dictionary = _blocks.get(block_id, {})
+	var cache_v: Variant = entry.get("face_textures", null)
+	var cache: Dictionary = {}
+	if cache_v is Dictionary:
+		cache = cache_v as Dictionary
+	if cache.has(face):
+		return cache[face] as Texture2D
+
+	var path := ""
+	var file := ""
+	var dir_key := ""
+	match face:
+		"top":
+			dir_key = "up"
+		"bottom":
+			dir_key = "down"
+		"front":
+			dir_key = "south"
+		"back":
+			dir_key = "north"
+		"right":
+			dir_key = "east"
+		"left":
+			dir_key = "west"
+
+	if not dir_key.is_empty():
+		path = str(entry.get("texture_" + dir_key + "_path", ""))
+		file = str(entry.get("texture_" + dir_key + "_file", ""))
+	if path.is_empty() and (face == "top" or face == "bottom"):
+		path = str(entry.get("texture_updown_path", ""))
+		file = str(entry.get("texture_updown_file", ""))
+	if path.is_empty():
+		path = str(entry.get("texture_sides_path", ""))
+		file = str(entry.get("texture_sides_file", ""))
+	if path.is_empty():
+		path = str(entry.get("texture_all_path", ""))
+		file = str(entry.get("texture_all_file", ""))
+	if path.is_empty():
+		path = str(entry.get("texture_path", ""))
+		file = str(entry.get("texture_file", ""))
+
+	var tex := HytaleImporter.get_texture_lazy(block_id, path, file)
+	if tex == null:
+		tex = get_texture(block_id)
+	cache[face] = tex
+	entry["face_textures"] = cache
 	return tex
 
 
@@ -163,7 +241,8 @@ static func get_custom_mesh(block_id: String) -> Mesh:
 	elif raw_atlas is Dictionary:
 		var d: Dictionary = raw_atlas
 		atlas_size = Vector2i(int(d.get("x", 64)), int(d.get("y", 64)))
-	var mesh := HytaleImporter.get_model_lazy(block_id, model_path, atlas_size)
+	var mesh := HytaleImporter.get_model_lazy(block_id, model_path, atlas_size,
+			str(entry.get("model_file", "")))
 	if mesh != null:
 		entry["custom_mesh"] = mesh
 	return mesh

@@ -3,13 +3,13 @@ class_name AxisGizmo
 extends TextureRect
 
 # ==================== COLORES ====================
-const COL_X := Color(1.0, 0.25, 0.25)
-const COL_Y := Color(0.25, 1.0, 0.25)
-const COL_Z := Color(0.25, 0.5, 1.0)
+const COL_X := Color(1.0, 0.18, 0.65)
+const COL_Y := Color(0.35, 1.0, 0.65)
+const COL_Z := Color(0.0, 0.90, 1.0)
 
-const BG_COL := Color(0.12, 0.12, 0.15, 0.65)     # Más transparente
-const RING_COL := Color(0.45, 0.45, 0.50, 0.55)   # Más transparente
-const SHADOW_COL := Color(0.0, 0.0, 0.0, 0.25)
+const BG_COL := Color(0.03, 0.06, 0.09, 0.72)     # Más transparente
+const RING_COL := Color(0.0, 0.65, 0.80, 0.55)    # Acento neón
+const SHADOW_COL := Color(0.0, 0.0, 0.0, 0.30)
 
 # ==================== CONFIGURACIÓN ====================
 const SIZE := Vector2(64, 64)

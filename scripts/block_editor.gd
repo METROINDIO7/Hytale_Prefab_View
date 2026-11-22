@@ -62,6 +62,15 @@ var _sel_preview  : MeshInstance3D
 var _hover_preview: MeshInstance3D
 var _mirror_preview: MeshInstance3D
 
+# Selection measurement tapes (X / Y / Z dimensions in blocks)
+var _measure_root : Node3D
+var _measure_x    : MeshInstance3D
+var _measure_y    : MeshInstance3D
+var _measure_z    : MeshInstance3D
+var _label_x      : Label3D
+var _label_y      : Label3D
+var _label_z      : Label3D
+
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
@@ -123,6 +132,51 @@ func _build_previews(world: Node3D) -> void:
 	_mirror_preview.mesh = mbox
 	_mirror_preview.visible = false
 	_preview_root.add_child(_mirror_preview)
+
+	_build_measure_previews()
+
+
+func _build_measure_previews() -> void:
+	_measure_root = Node3D.new()
+	_measure_root.name = "SelectionMeasure"
+	_measure_root.visible = false
+	_preview_root.add_child(_measure_root)
+
+	var tape_mat := StandardMaterial3D.new()
+	tape_mat.albedo_color = Color(0.2, 0.9, 1.0)
+	tape_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	tape_mat.no_depth_test = true
+
+	_measure_x = _make_measure_ribbon(tape_mat)
+	_measure_y = _make_measure_ribbon(tape_mat)
+	_measure_z = _make_measure_ribbon(tape_mat)
+	_label_x   = _make_measure_label()
+	_label_y   = _make_measure_label()
+	_label_z   = _make_measure_label()
+
+
+func _make_measure_ribbon(mat: StandardMaterial3D) -> MeshInstance3D:
+	var box := BoxMesh.new()
+	box.size = Vector3.ONE
+	box.material = mat
+	var mi := MeshInstance3D.new()
+	mi.mesh = box
+	_measure_root.add_child(mi)
+	return mi
+
+
+func _make_measure_label() -> Label3D:
+	var label := Label3D.new()
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.font_size = 48
+	label.pixel_size = 0.006
+	label.outline_size = 10
+	label.modulate = Color(0.35, 0.95, 1.0)
+	label.outline_modulate = Color(0.0, 0.0, 0.0, 0.9)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_measure_root.add_child(label)
+	return label
 
 
 # ── Input handlers (called from main.gd) ─────────────────────────────────────
@@ -189,6 +243,7 @@ func set_tool(t: Tool) -> void:
 	_mirror_preview.visible = false
 	if t != Tool.SHAPE_SELECT:
 		_sel_preview.visible = false
+		_measure_root.visible = false
 		_sel_active = false
 
 
@@ -351,6 +406,7 @@ func clear_selection() -> void:
 	_sel_active = false
 	_sel_drag   = false
 	_sel_preview.visible = false
+	_measure_root.visible = false
 
 
 # ── Internal brush/apply ──────────────────────────────────────────────────────
@@ -628,13 +684,16 @@ func _update_hover_preview(center: Vector3i) -> void:
 func _update_sel_preview() -> void:
 	if not _sel_active and not _sel_drag:
 		_sel_preview.visible = false
+		_measure_root.visible = false
 		return
 	_sel_preview.visible = true
 	var mn_xz := Vector2i(min(_sel_start.x, _sel_end.x), min(_sel_start.z, _sel_end.z))
 	var mx_xz := Vector2i(max(_sel_start.x, _sel_end.x), max(_sel_start.z, _sel_end.z))
+	var block_height := 1
 	var preview_height := 0.15
 	if sel_shape in [SelShape.BOX, SelShape.CYLINDER, SelShape.SPHERE, SelShape.PYRAMID]:
-		preview_height = float(maxi(1, brush_height))
+		block_height = maxi(1, brush_height)
+		preview_height = float(block_height)
 	var sz := Vector3(mx_xz.x - mn_xz.x + 1, preview_height, mx_xz.y - mn_xz.y + 1)
 	var center_y := float(edit_y)
 	if preview_height > 0.2:
@@ -642,6 +701,40 @@ func _update_sel_preview() -> void:
 	var ct := Vector3((mn_xz.x + mx_xz.x) * 0.5, center_y, (mn_xz.y + mx_xz.y) * 0.5)
 	_sel_preview.position = ct
 	(_sel_preview.mesh as BoxMesh).size = sz
+	_update_measure_preview(mn_xz, mx_xz, block_height)
+
+
+func _update_measure_preview(mn_xz: Vector2i, mx_xz: Vector2i, height: int) -> void:
+	var dx := mx_xz.x - mn_xz.x + 1
+	var dz := mx_xz.y - mn_xz.y + 1
+	var dy := maxi(1, height)
+	var x0 := float(mn_xz.x) - 0.5
+	var x1 := float(mx_xz.x) + 0.5
+	var z0 := float(mn_xz.y) - 0.5
+	var z1 := float(mx_xz.y) + 0.5
+	var y0 := float(edit_y) - 0.5
+	var y1 := y0 + float(dy)
+	var cx := (x0 + x1) * 0.5
+	var cy := (y0 + y1) * 0.5
+	var cz := (z0 + z1) * 0.5
+	var off := 0.12
+	var thick := 0.04
+
+	_measure_x.position = Vector3(cx, y0 - off, z1 + off)
+	(_measure_x.mesh as BoxMesh).size = Vector3(float(dx), thick, thick)
+	_measure_z.position = Vector3(x1 + off, y0 - off, cz)
+	(_measure_z.mesh as BoxMesh).size = Vector3(thick, thick, float(dz))
+	_measure_y.position = Vector3(x1 + off, cy, z1 + off)
+	(_measure_y.mesh as BoxMesh).size = Vector3(thick, float(dy), thick)
+
+	_label_x.position = Vector3(cx, y0 - off * 2.0, z1 + off)
+	_label_y.position = Vector3(x1 + off * 2.0, cy, z1 + off)
+	_label_z.position = Vector3(x1 + off, y0 - off * 2.0, cz)
+	_label_x.text = "Largo: %d" % dx
+	_label_y.text = "Alto: %d" % dy
+	_label_z.text = "Profundidad: %d" % dz
+
+	_measure_root.visible = true
 
 
 # ── Ray → grid ────────────────────────────────────────────────────────────────

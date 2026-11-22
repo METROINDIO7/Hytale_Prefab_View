@@ -8,18 +8,21 @@
 [ext_resource type="Script" uid="uid://ow4cvl5ydkpq" path="res://scripts/reference_manager.gd" id="5"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_tbgi4"]
-sky_top_color = Color(0.5177506, 0.59088457, 0.6885361, 1)
-sky_horizon_color = Color(1.2302366, 1.2671475, 1.3160703, 1)
-ground_bottom_color = Color(0.5176471, 0.5921569, 0.6901961, 1)
-ground_horizon_color = Color(1.2302366, 1.2671475, 1.3160703, 1)
+sky_top_color = Color(0.015, 0.022, 0.055, 1)
+sky_horizon_color = Color(0.035, 0.075, 0.13, 1)
+ground_bottom_color = Color(0.01, 0.014, 0.025, 1)
+ground_horizon_color = Color(0.03, 0.06, 0.1, 1)
 
 [sub_resource type="Sky" id="Sky_tefeu"]
 sky_material = SubResource("ProceduralSkyMaterial_tbgi4")
 
 [sub_resource type="Environment" id="Environment_o6xl0"]
-background_mode = 1
-background_color = Color(0.5133016, 0.6643882, 0.7839498, 1)
+background_mode = 2
+background_color = Color(0.02, 0.03, 0.055, 1)
 sky = SubResource("Sky_tefeu")
+ambient_light_source = 2
+ambient_light_color = Color(0.4, 0.55, 0.75, 1)
+ambient_light_energy = 0.55
 tonemap_mode = 2
 
 [node name="Main" type="Control" unique_id=1124688039]
